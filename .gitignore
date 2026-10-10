@@ -1,0 +1,15 @@
+# Compiled Java class files
+*.class
+
+# Log files
+*.log
+
+# IDE & OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Archives
+*.zip

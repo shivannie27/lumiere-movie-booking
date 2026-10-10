@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumière Cinemas - Java Web App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Top Navigation Header -->
+    <header>
+        <div class="brand">Lumière</div>
+        <nav class="nav-pills">
+            <button class="pill-btn active" id="nav-home" onclick="UI.showScreen('home')">Home</button>
+            <button class="pill-btn" id="nav-bookings" onclick="UI.showScreen('bookings')">My Bookings</button>
+            <button class="pill-btn" id="nav-summary" onclick="UI.showScreen('summary')">Summary</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Home Screen: Hero Banner, Filters, Movie Cards with Real Posters -->
+        <section id="screen-home" class="screen active">
+            <div class="hero">
+                <span class="hero-tag">More Movies. More Magic.</span>
+                <h1>Your Next Favourite Movie Awaits</h1>
+                <input type="text" id="movie-search" class="search-input" placeholder="Search for movies..." oninput="UI.filterMovies()">
+            </div>
+            <h2 style="font-family: Georgia, serif; font-size: 20px;">Now Showing</h2>
+            <div class="genre-bar" id="genre-bar"></div>
+            <div class="movies-grid" id="movies-grid"></div>
+        </section>
+
+        <!-- Movie Details Screen with High-Res Poster -->
+        <section id="screen-details" class="screen">
+            <button class="pill-btn outline" onclick="UI.showScreen('home')">&larr; Back to Movies</button>
+            <div class="details-box">
+                <div class="details-poster-wrap">
+                    <img id="details-poster-img" class="details-poster-img" src="" alt="Poster">
+                </div>
+                <div class="details-content">
+                    <h1 id="details-title" style="font-family: Georgia, serif; font-size: 28px;"></h1>
+                    <p id="details-rating" style="font-weight: bold; margin: 6px 0;"></p>
+                    <p id="details-meta" style="color: var(--sage); font-size: 13px; line-height: 1.8;"></p>
+                    <div style="margin: 20px 0;">
+                        <h3 style="font-size: 15px; margin-bottom: 8px;">Select Cinema</h3>
+                        <div class="genre-bar" id="cinema-pills" style="margin: 0;"></div>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 15px; margin-bottom: 8px;">Available Show Times</h3>
+                        <div class="times-group" id="showtime-pills"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Seat Grid & Booking Screen -->
+        <section id="screen-booking" class="screen">
+            <button class="pill-btn outline" style="margin-bottom: 16px;" onclick="UI.showScreen('details')">&larr; Back</button>
+            <div class="booking-layout">
+                <!-- Left: Pricing Breakdown -->
+                <div class="card-panel">
+                    <h3 id="book-movie-title" style="font-size: 18px; margin-bottom: 4px;"></h3>
+                    <p id="book-movie-show" style="color: var(--sage); font-size: 12px; margin-bottom: 16px;"></p>
+                    
+                    <label style="font-size: 12px; font-weight: bold;">Ticket Type</label>
+                    <div style="display: flex; gap: 8px; margin: 8px 0 16px;">
+                        <button class="pill-btn filled" id="btn-type-regular" onclick="UI.setTicketType(false)">Regular</button>
+                        <button class="pill-btn outline" id="btn-type-premium" onclick="UI.setTicketType(true)">Premium</button>
+                    </div>
+                    <small style="color: var(--sage); display: block; margin-bottom: 16px;">Premium = recliner seats (+Rs. 100/seat)</small>
+
+                    <div class="price-row"><span>Base Price</span><span id="bill-base">Rs. 0.00</span></div>
+                    <div class="price-row"><span>Convenience Fee</span><span id="bill-fee">Rs. 0.00</span></div>
+                    <div class="price-row"><span>GST (18%)</span><span id="bill-gst">Rs. 0.00</span></div>
+                    <div class="price-row total"><span>Total</span><span id="bill-total">Rs. 0.00</span></div>
+                </div>
+
+                <!-- Middle: Interactive Seat Matrix -->
+                <div class="card-panel">
+                    <div class="screen-bar">S C R E E N</div>
+                    <div class="seat-matrix" id="seat-matrix"></div>
+                    <div class="legend">
+                        <div><span class="legend-box" style="background: var(--mint);"></span> Available</div>
+                        <div><span class="legend-box" style="background: var(--burgundy);"></span> Selected</div>
+                        <div><span class="legend-box" style="background: var(--booked);"></span> Booked</div>
+                    </div>
+                </div>
+
+                <!-- Right: Customer Form & Proceed -->
+                <div class="card-panel">
+                    <h3 style="font-size: 14px; color: var(--sage); margin-bottom: 4px;">Selected Seats</h3>
+                    <p id="selected-seats-display" style="font-size: 16px; font-weight: bold; margin-bottom: 18px;">None</p>
+                    
+                    <div class="form-group">
+                        <label for="cust-name">Customer Name</label>
+                        <input type="text" id="cust-name" placeholder="Enter full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="cust-phone">Phone Number (10 digits)</label>
+                        <input type="text" id="cust-phone" placeholder="e.g. 9876543210" maxlength="10">
+                    </div>
+                    <button class="pill-btn filled" style="width: 100%; margin-top: 12px; padding: 12px;" onclick="UI.proceedToPay()">Proceed to Pay &gt;</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Booking Confirmed Screen -->
+        <section id="screen-confirmed" class="screen">
+            <div class="confirm-center">
+                <div class="confirm-card">
+                    <div class="tick-badge">&#10003;</div>
+                    <h2 style="font-family: Georgia, serif; font-size: 24px;">Booking Confirmed!</h2>
+                    <p style="color: var(--sage); font-size: 13px; margin: 6px 0 20px;">Your movie tickets are booked successfully</p>
+                    <div id="confirm-details" style="text-align: left; margin-bottom: 24px;"></div>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="pill-btn filled" onclick="UI.showScreen('bookings')">View My Bookings</button>
+                        <button class="pill-btn outline" onclick="UI.showScreen('home')">Back to Home</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bookings Management Table -->
+        <section id="screen-bookings" class="screen">
+            <h2 style="font-family: Georgia, serif; font-size: 24px; margin-bottom: 12px;">My Bookings</h2>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px;">
+                <input type="text" id="bookings-search" class="search-input" style="max-width: 320px;" placeholder="Search by ID, name or movie..." oninput="UI.renderBookings()">
+                <button class="pill-btn outline" onclick="document.getElementById('bookings-search').value=''; UI.renderBookings();">Show All</button>
+                <span id="bookings-count" style="font-size: 13px; color: var(--sage); margin-left: 12px;"></span>
+            </div>
+
+            <table class="bookings-table">
+                <thead>
+                    <tr>
+                        <th>Booking ID</th>
+                        <th>Movie</th>
+                        <th>Show</th>
+                        <th>Seats</th>
+                        <th>Type</th>
+                        <th>Customer</th>
+                        <th>Total</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="bookings-table-body"></tbody>
+            </table>
+        </section>
+
+        <!-- Summary Analytics Tiles -->
+        <section id="screen-summary" class="screen">
+            <h2 style="font-family: Georgia, serif; font-size: 24px;">Summary</h2>
+            <p style="color: var(--sage); font-size: 13px; margin-top: 4px;">Lumière Cinemas - Real-time Overview</p>
+            <div class="summary-grid" id="summary-tiles"></div>
+        </section>
+    </main>
+
+    <!-- Bill Modal -->
+    <div class="modal-overlay" id="bill-modal">
+        <div class="modal-card">
+            <h3 style="font-family: Georgia, serif; font-size: 20px; margin-bottom: 14px;">Bill Receipt</h3>
+            <div id="modal-bill-content"></div>
+            <button class="pill-btn filled" style="width: 100%; margin-top: 18px;" onclick="UI.closeBillModal()">Close</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
