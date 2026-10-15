@@ -562,13 +562,41 @@ const UI = {
         </svg>`;
     },
 
+    qrMode: 'camera',
+
+    toggleQrMode(ticketId) {
+        this.qrMode = this.qrMode === 'camera' ? 'web' : 'camera';
+        const t = (this.bookings && this.bookings.find(b => b.id === ticketId)) || this.lastConfirmedTicket;
+        if (t) {
+            const preview = document.getElementById("confirm-pass-preview");
+            if (preview && preview.innerHTML) preview.innerHTML = this.buildBoardingPassHtml(t);
+            const modalBody = document.getElementById("modal-pass-body");
+            if (modalBody && modalBody.innerHTML) modalBody.innerHTML = this.buildBoardingPassHtml(t);
+        }
+    },
+
     buildBoardingPassHtml(ticket) {
         const host = (this.serverInfo && this.serverInfo.host && !this.serverInfo.host.startsWith("127.")) 
             ? this.serverInfo.host 
             : window.location.hostname;
         const port = (this.serverInfo && this.serverInfo.port) ? this.serverInfo.port : (window.location.port || 8080);
         const ticketUrl = `http://${host}:${port}/ticket?id=${ticket.id}`;
-        const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=2&data=${encodeURIComponent(ticketUrl)}`;
+
+        const cameraTextPass = `🎟️ LUMIÈRE CINEMAS - E-TICKET\n` +
+            `--------------------------------\n` +
+            `Movie: ${ticket.movie.title} [${ticket.movie.certification || 'UA'}]\n` +
+            `Cinema: ${ticket.showTime}\n` +
+            `Seats: ${ticket.seats.join(", ")} (${ticket.type} Recliner)\n` +
+            `Guest: ${ticket.customer.name} (${ticket.customer.phone})\n` +
+            `Booking ID: ${ticket.id}\n` +
+            `Total Paid: Rs. ${parseFloat(ticket.total).toFixed(2)}\n` +
+            `Turnstile: ENTRY CLEARED ✅\n` +
+            `--------------------------------\n` +
+            `Gate opens 15 mins prior`;
+
+        const isCameraMode = (this.qrMode || 'camera') === 'camera';
+        const qrContent = isCameraMode ? cameraTextPass : ticketUrl;
+        const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=2&data=${encodeURIComponent(qrContent)}`;
         const fallbackSvg = this.generateQrSvg(ticket.id);
         const snacksVal = ticket.snacks && parseFloat(ticket.snacks) > 0 ? `Rs. ${parseFloat(ticket.snacks).toFixed(2)}` : "None";
         const discountVal = ticket.discount && parseFloat(ticket.discount) > 0 ? `-Rs. ${parseFloat(ticket.discount).toFixed(2)}` : "Standard";
@@ -617,12 +645,19 @@ const UI = {
                         <div style="font-size: 10px; color: var(--peach); letter-spacing: 1px;">BOOKING PASSPORT ID</div>
                         <div style="font-family: monospace; font-size: 16px; font-weight: bold; letter-spacing: 2px;">${ticket.id}</div>
                         <div style="font-size: 10px; color: rgba(254,215,184,0.7); margin-top: 4px;">Gate opens 15 mins before showtime</div>
+                        <div style="margin-top: 8px;">
+                            <button type="button" class="pill-btn outline" style="padding: 3px 10px; font-size: 10px; color: var(--peach); border-color: rgba(254,215,184,0.5); background: transparent;" onclick="UI.toggleQrMode('${ticket.id}')">
+                                Mode: ${isCameraMode ? '📱 Camera Pass' : '🌐 Web URL'} (Toggle)
+                            </button>
+                        </div>
                     </div>
                     <a href="${ticketUrl}" target="_blank" title="Scan with Phone Camera or Click to Open Live Ticket" style="display: flex; flex-direction: column; align-items: center; text-decoration: none;">
                         <div class="pass-qr-wrap" style="cursor: pointer;">
-                            <img src="${qrImgSrc}" alt="QR" width="64" height="64" style="display: block; border-radius: 4px;" onerror="this.onerror=null; this.parentElement.innerHTML=\`${fallbackSvg.replace(/`/g, "\\`")}\`;">
+                            <img src="${qrImgSrc}" alt="QR" width="68" height="68" style="display: block; border-radius: 4px;" onerror="this.onerror=null; this.parentElement.innerHTML=\`${fallbackSvg.replace(/`/g, "\\`")}\`;">
                         </div>
-                        <span style="font-size: 9px; color: var(--peach); margin-top: 4px; font-weight: 600; text-decoration: underline;">📱 Scan / Click</span>
+                        <span style="font-size: 9px; color: var(--peach); margin-top: 4px; font-weight: 600; text-decoration: underline;">
+                            ${isCameraMode ? '📱 Camera Scan' : '🌐 Web Link'}
+                        </span>
                     </a>
                 </div>
             </div>
