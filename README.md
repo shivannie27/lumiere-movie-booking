@@ -1,6 +1,17 @@
 # Lumière Cinemas — Web-Based Cinema Booking System
 
-A modular, full-stack cinema ticketing application built with Object-Oriented Java (JDK 11+) and a modern, responsive web client. The application features an embedded Java HTTP server, real-time seat collision detection, customizable ticket tiers (Regular and Premium), customer verification, and dynamic pricing calculations with GST.
+A modular, full-stack cinema ticketing application built with Object-Oriented Java (JDK 11+) and a modern, responsive web client. The application features an embedded Java HTTP server, real-time seat collision detection, customizable ticket tiers (Regular and Premium), customer verification, multi-city multiplex exploration, theatrical trailers, F&B concessions, promo code discounts, and printable digital cinema boarding passes.
+
+---
+
+## Key Features & Capabilities
+
+- 🏙️ **Multi-City Multiplex Selection**: Switch between major cinema markets (Bengaluru, Mumbai, Delhi NCR, Pune, Hyderabad) with dynamic multiplex theater routing.
+- 🎬 **Official Movie Trailers**: Integrated modal video playback for featured cinema titles.
+- 🍿 **Concessions & F&B Add-ons**: Add theater favorites (Jumbo Caramel Popcorn, Cheese Nachos, Chilled Coke, Artisanal Cappuccino, Gourmet Hot Dogs) with real-time bill breakdown.
+- 🎟️ **Promotional Codes & Discounts**: Verified coupon codes (`LUMIERE50`, `STUDENT10`, `FIRSTSHOW`) demonstrating overloaded polymorphic bill calculation.
+- 🎫 **Printable Digital Boarding Pass**: Luxury golden e-ticket with deterministic SVG QR code, tear line perforation, and one-click browser print support (`window.print()`).
+- ✨ **Cinematic Ambience & Audio**: Projector ambient screen glow and browser-native Web Audio API synthesizer clicks and confirmation chimes.
 
 ---
 
@@ -9,23 +20,23 @@ A modular, full-stack cinema ticketing application built with Object-Oriented Ja
 The system follows a modular object-oriented architecture, with distinct component ownership across the development team:
 
 ### 1. Kabir Ubale — Lead Architecture & Backend Core
-- **`App.java`**: Embedded Java HTTP Web Server (`com.sun.net.httpserver.HttpServer`), REST API routing (`/api/movies`, `/api/bookings`, `/api/booked-seats`, `/api/book`, `/api/cancel`, `/api/summary`), auto-port detection, and multi-folder static asset dispatcher.
-- **`BookingStore.java`**: Thread-safe transactional storage, real-time seat collision prevention, search indexing, dynamic cancellation releasing booked seats, and financial metrics calculation.
+- **`App.java`**: Embedded Java HTTP Web Server (`com.sun.net.httpserver.HttpServer`), REST API routing (`/api/movies`, `/api/cities`, `/api/coupon`, `/api/bookings`, `/api/booked-seats`, `/api/book`, `/api/cancel`, `/api/summary`), auto-port detection, and multi-folder static asset dispatcher.
+- **`BookingStore.java`**: Thread-safe transactional storage, multi-city multiplex registry, real-time seat collision prevention, search indexing, dynamic cancellation releasing booked seats, and financial metrics calculation.
 - **`run_lumiere.bat`**: Unified cross-module compilation and launcher script.
 
 ### 2. Shaikh Rahim — Movie Domain Model & Frontend Catalog
-- **`Movie.java`**: Domain entity encapsulating movie metadata (title, language, genre, duration in minutes, base price, rating, and poster asset mapping).
-- **`index.html`**: Responsive single-page application structure, screen router containers, cinema selection tabs, and showtime selectors.
+- **`Movie.java`**: Domain entity encapsulating movie metadata (title, language, genre, duration in minutes, base price, rating, certification, synopsis, ensemble cast, and YouTube trailer ID).
+- **`index.html`**: Responsive single-page application structure, city selector pill, movie details view, trailer popup modal, F&B concessions drawer, promo code input, and digital boarding pass view.
 - **`posters/`**: Theatrical poster collection for all cataloged movies.
 
 ### 3. Shruti Wadhonkar — Customer Verification & UI Design System
 - **`Customer.java`**: Customer domain entity enforcing strict input constraints and 10-digit mobile number validation via regex (`^\d{10}$`).
-- **`style.css`**: Comprehensive CSS design system utilizing Lumière's burgundy and peach palette, responsive movie cards, interactive seat matrix states (Available, Selected, Booked), and modal dialogs.
+- **`style.css`**: Comprehensive CSS design system utilizing Lumière's burgundy, deep wine, peach, and gold palette, curved screen projector glow, interactive seat matrix states (Available, Selected, Booked), concession counters, luxury boarding pass layout, and print media stylesheet.
 
 ### 4. Shivani Dudhane — Billing Engine & Client Controller
-- **`Ticket.java`**: Core entity demonstrating object composition (`Ticket HAS-A Movie` and `Ticket HAS-A Customer`), base billing calculations, and statutory tax breakdown (18% GST and convenience fee).
+- **`Ticket.java`**: Core entity demonstrating object composition (`Ticket HAS-A Movie` and `Ticket HAS-A Customer`), method overloading (`calculateBill()`, `calculateBill(qty)`, `calculateBill(qty, discountPct)`), and statutory tax breakdown (18% GST, convenience fee, concessions, and discounts).
 - **`PremiumTicket.java`**: Demonstrates OOP inheritance (`IS-A Ticket`) and runtime polymorphism by overriding bill calculation to incorporate recliner surcharges.
-- **`app.js`**: Client-side controller interfacing with the backend REST endpoints, handling real-time pricing updates, and managing interactive seat selection.
+- **`app.js`**: Client-side controller interfacing with backend REST endpoints, handling multi-city updates, trailer modals, F&B cart state, coupon verification, SVG QR code generation, and Web Audio API synthesis.
 
 ---
 

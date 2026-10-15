@@ -45,6 +45,10 @@ public class App {
             sendJson(exchange, 200, store.getMoviesJson());
         });
 
+        server.createContext("/api/cities", exchange -> {
+            sendJson(exchange, 200, store.getCitiesJson());
+        });
+
         server.createContext("/api/bookings", exchange -> {
             sendJson(exchange, 200, store.getBookingsJson());
         });
@@ -69,6 +73,22 @@ public class App {
             sendJson(exchange, 200, sb.toString());
         });
 
+        server.createContext("/api/coupon", exchange -> {
+            String query = exchange.getRequestURI().getQuery();
+            Map<String, String> params = parseQuery(query);
+            String code = params.getOrDefault("code", "").trim().toUpperCase();
+            
+            if (code.equals("LUMIERE50")) {
+                sendJson(exchange, 200, "{\"valid\":true,\"code\":\"LUMIERE50\",\"discount\":50.0,\"amount\":50.0,\"desc\":\"Flat Rs. 50 Off\"}");
+            } else if (code.equals("STUDENT10")) {
+                sendJson(exchange, 200, "{\"valid\":true,\"code\":\"STUDENT10\",\"discount\":40.0,\"amount\":40.0,\"desc\":\"Rs. 40 Student Special Discount\"}");
+            } else if (code.equals("FIRSTSHOW")) {
+                sendJson(exchange, 200, "{\"valid\":true,\"code\":\"FIRSTSHOW\",\"discount\":60.0,\"amount\":60.0,\"desc\":\"Rs. 60 Welcome Discount\"}");
+            } else {
+                sendJson(exchange, 400, "{\"valid\":false,\"error\":\"Invalid or expired coupon code\"}");
+            }
+        });
+
         server.createContext("/api/book", exchange -> {
             if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
                 sendJson(exchange, 405, "{\"error\":\"Method not allowed\"}");
@@ -82,7 +102,13 @@ public class App {
                 boolean premium = Boolean.parseBoolean(map.get("premium"));
                 String custName = map.get("name");
                 String custPhone = map.get("phone");
-                String[] seats = map.get("seats").split(",");
+                String rawSeats = map.get("seats");
+                if (rawSeats.startsWith("[")) rawSeats = rawSeats.substring(1);
+                if (rawSeats.endsWith("]")) rawSeats = rawSeats.substring(0, rawSeats.length() - 1);
+                rawSeats = rawSeats.replace("\"", "").replace(" ", "");
+                String[] seats = rawSeats.split(",");
+                double snacks = map.containsKey("snacks") ? Double.parseDouble(map.get("snacks")) : 0.0;
+                double discount = map.containsKey("discount") ? Double.parseDouble(map.get("discount")) : 0.0;
 
                 Movie movie = store.findMovie(movieTitle);
                 if (movie == null) throw new IllegalArgumentException("Movie not found.");
@@ -90,8 +116,8 @@ public class App {
                 Customer customer = new Customer(custName, custPhone);
                 String id = store.nextBookingId();
                 Ticket ticket = premium
-                    ? new PremiumTicket(id, movie, customer, showTime, seats)
-                    : new Ticket(id, movie, customer, showTime, seats);
+                    ? new PremiumTicket(id, movie, customer, showTime, seats, snacks, discount)
+                    : new Ticket(id, movie, customer, showTime, seats, snacks, discount);
 
                 store.add(ticket);
                 sendJson(exchange, 200, ticket.toJson());
@@ -105,11 +131,15 @@ public class App {
                 sendJson(exchange, 405, "{\"error\":\"Method not allowed\"}");
                 return;
             }
-            String body = readBody(exchange);
-            Map<String, String> map = parseSimpleJson(body);
-            String id = map.get("id");
-            boolean ok = store.cancel(id);
-            sendJson(exchange, 200, "{\"success\":" + ok + "}");
+            try {
+                String body = readBody(exchange);
+                Map<String, String> map = parseSimpleJson(body);
+                String id = map.get("id");
+                boolean ok = store.cancel(id);
+                sendJson(exchange, 200, "{\"success\":" + ok + "}");
+            } catch (Exception ex) {
+                sendJson(exchange, 400, "{\"error\":\"" + ex.getMessage().replace("\"", "\\\"") + "\"}");
+            }
         });
 
         server.createContext("/api/summary", exchange -> {
@@ -180,17 +210,17 @@ public class App {
         if (json.startsWith("{")) json = json.substring(1);
         if (json.endsWith("}")) json = json.substring(0, json.length() - 1);
 
-        String[] pairs = json.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-        for (String pair : pairs) {
-            String[] kv = pair.split(":", 2);
-            if (kv.length == 2) {
-                String k = kv[0].trim().replace("\"", "");
-                String v = kv[1].trim().replace("\"", "");
-                if (v.startsWith("[") && v.endsWith("]")) {
-                    v = v.substring(1, v.length() - 1).replace("\"", "").replace(" ", "");
-                }
-                map.put(k, v);
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\"?([a-zA-Z0-9_-]+)\"?\\s*:\\s*(\"[^\"]*\"|\\[[^\\]]*\\]|[^,}]+)");
+        java.util.regex.Matcher matcher = pattern.matcher(json);
+        while (matcher.find()) {
+            String k = matcher.group(1).trim().replace("\"", "");
+            String v = matcher.group(2).trim();
+            if (v.startsWith("\"") && v.endsWith("\"") && v.length() >= 2) {
+                v = v.substring(1, v.length() - 1);
+            } else if (v.startsWith("[") && v.endsWith("]") && v.length() >= 2) {
+                v = v.substring(1, v.length() - 1).replace("\"", "").replace(" ", "");
             }
+            map.put(k, v);
         }
         return map;
     }

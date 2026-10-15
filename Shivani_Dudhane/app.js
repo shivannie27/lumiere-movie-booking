@@ -1,25 +1,44 @@
 // =====================================================================
 // LUMIÈRE CINEMA CLIENT CONTROLLER
 // Contributed by: Shivani Dudhane
+// Enhanced: Multi-City, Trailers, Concessions F&B, Promo Codes & Digital Pass
 // =====================================================================
 
 const UI = {
     movies: [],
     bookings: [],
     bookedSeats: [],
-    currentMovie: null,
-    currentCinema: "PVR Koramangala",
+    cityMap: {},
+    cities: ["Bengaluru", "Mumbai", "Delhi NCR", "Pune", "Hyderabad"],
+    currentCity: "Bengaluru",
+    currentCinema: "PVR Koramangala (Dolby Atmos)",
     currentShowTime: "04:30 PM",
+    currentMovie: null,
     selectedSeats: [],
     isPremium: false,
     selectedGenre: "All",
 
-    cinemas: ["PVR Koramangala", "INOX Orion Mall", "Cinepolis Nexus", "Miraj Cinemas"],
+    // Concessions & Promo Code State
+    concessions: [
+        { id: "popcorn", name: "Jumbo Caramel Popcorn", price: 280, icon: "🍿", desc: "Buttery crisp gourmet popcorn" },
+        { id: "nachos", name: "Cheese Jalapeño Nachos", price: 220, icon: "🧀", desc: "Warm tortilla chips with hot melted cheese" },
+        { id: "coke", name: "Chilled Coca-Cola (500ml)", price: 140, icon: "🥤", desc: "Refreshing icy fountain beverage" },
+        { id: "coffee", name: "Artisanal Cappuccino", price: 160, icon: "☕", desc: "Fresh espresso with creamy steamed milk" },
+        { id: "hotdog", name: "Gourmet Theater Hot Dog", price: 190, icon: "🌭", desc: "Toasted brioche bun with smoked frank" }
+    ],
+    snackCart: { popcorn: 0, nachos: 0, coke: 0, coffee: 0, hotdog: 0 },
+    appliedCoupon: null,
+    appliedDiscount: 0.0,
+    lastConfirmedTicket: null,
+
+    cinemas: ["PVR Koramangala (Dolby Atmos)", "INOX Orion Mall (IMAX 4K)", "Cinepolis Nexus Whitefield (VIP)", "Miraj Cinemas Bangalore"],
     times: ["10:30 AM", "01:30 PM", "04:45 PM", "08:00 PM", "11:15 PM"],
     genres: ["All", "Action", "Comedy", "Drama", "Sci-Fi", "Animation", "Thriller"],
 
     async init() {
         this.renderGenres();
+        this.renderSnacks();
+        await this.loadCities();
         await this.loadMovies();
         this.showScreen("home");
     },
@@ -33,6 +52,52 @@ const UI = {
         if (navBtn) navBtn.classList.add("active");
         if (screenId === "bookings") this.loadBookings();
         if (screenId === "summary") this.loadSummary();
+    },
+
+    // ---------- City Selection & Filtering ----------
+    async loadCities() {
+        try {
+            const res = await fetch("/api/cities");
+            this.cityMap = await res.json();
+            this.cities = Object.keys(this.cityMap);
+            const selector = document.getElementById("city-selector");
+            if (selector && this.cities.length > 0) {
+                selector.innerHTML = this.cities.map(name => 
+                    `<option value="${name}" ${name === this.currentCity ? "selected" : ""}>${name}</option>`
+                ).join("");
+                this.updateCinemasForCity(this.currentCity);
+            }
+        } catch (e) {
+            console.warn("Using default cities", e);
+        }
+    },
+
+    changeCity(cityName) {
+        this.currentCity = cityName;
+        this.updateCinemasForCity(cityName);
+        
+        const heading = document.getElementById("current-city-heading");
+        if (heading) heading.innerText = cityName;
+        
+        const badge = document.getElementById("city-status-badge");
+        if (badge) badge.innerText = `📍 ${this.cinemas.length} Multiplexes Active`;
+
+        const detailsLabel = document.getElementById("details-city-label");
+        if (detailsLabel) detailsLabel.innerText = cityName;
+
+        // If currently viewing details, re-render cinema pills
+        if (this.currentMovie) {
+            this.renderCinemaPills();
+        }
+    },
+
+    updateCinemasForCity(cityName) {
+        if (this.cityMap && this.cityMap[cityName]) {
+            this.cinemas = this.cityMap[cityName];
+        } else {
+            this.cinemas = ["PVR Koramangala (Dolby Atmos)", "INOX Orion Mall (IMAX 4K)", "Cinepolis Nexus Whitefield (VIP)"];
+        }
+        this.currentCinema = this.cinemas[0];
     },
 
     // ---------- Movie Display & Filtering ----------
@@ -65,21 +130,33 @@ const UI = {
         const grid = document.getElementById("movies-grid");
         const filtered = this.movies.filter(m => {
             const matchesGenre = this.selectedGenre === "All" || m.genre.includes(this.selectedGenre);
-            const matchesQuery = !query || m.title.toLowerCase().includes(query);
+            const matchesQuery = !query || 
+                m.title.toLowerCase().includes(query) ||
+                (m.synopsis && m.synopsis.toLowerCase().includes(query)) ||
+                (m.cast && m.cast.toLowerCase().includes(query));
             return matchesGenre && matchesQuery;
         });
+
         if (filtered.length === 0) {
-            grid.innerHTML = `<p style="grid-column: 1/-1; color: var(--sage);">No movies found.</p>`;
+            grid.innerHTML = `<p style="grid-column: 1/-1; color: var(--sage); padding: 40px 0; text-align: center;">No movies found matching your search.</p>`;
             return;
         }
+
         grid.innerHTML = filtered.map(m => `
-            <div class="movie-card" onclick="UI.openDetails('${m.title}')">
+            <div class="movie-card" onclick="UI.openDetails('${m.title.replace(/'/g, "\\'")}')">
                 <div class="poster-wrap">
+                    <span class="badge-cert">${m.certification || 'UA'}</span>
+                    <span class="badge-rating">&#9733; ${m.rating}</span>
+                    <button class="trailer-quick-btn" onclick="event.stopPropagation(); UI.openTrailer('${m.title.replace(/'/g, "\\'")}', '${m.trailerId || 'dQw4w9WgXcQ'}')">▶ Trailer</button>
                     <img src="${m.poster}" alt="${m.title}" class="poster-img" onerror="this.src='https://placehold.co/300x450/3A0E12/FED7B8?text=${encodeURIComponent(m.title)}'">
                 </div>
                 <div class="movie-info">
                     <h3>${m.title}</h3>
-                    <div class="movie-meta">${m.genre} &bull; Rating ${m.rating}/10</div>
+                    <div class="movie-meta">${m.genre} &bull; ${m.duration}</div>
+                    <div class="movie-card-footer">
+                        <span class="movie-price-tag">From Rs. ${m.price.toFixed(0)}</span>
+                        <span style="font-size: 11px; color: var(--sage);">${m.language}</span>
+                    </div>
                 </div>
             </div>
         `).join("");
@@ -88,20 +165,35 @@ const UI = {
     openDetails(title) {
         this.currentMovie = this.movies.find(m => m.title === title);
         if (!this.currentMovie) return;
+
         document.getElementById("details-poster-img").src = this.currentMovie.poster;
         document.getElementById("details-title").innerText = this.currentMovie.title;
-        document.getElementById("details-rating").innerText = `Rating ${this.currentMovie.rating} / 10`;
-        document.getElementById("details-meta").innerText = `Language: ${this.currentMovie.language} | Duration: ${this.currentMovie.duration} | Base Price: Rs. ${this.currentMovie.price.toFixed(2)}`;
-        document.getElementById("cinema-pills").innerHTML = this.cinemas.map(c => `
-            <button class="genre-pill ${c === this.currentCinema ? 'active' : ''}" onclick="UI.selectCinema('${c}')">${c}</button>
-        `).join("");
+        document.getElementById("details-rating").innerHTML = `&#9733; Rating ${this.currentMovie.rating} / 10 &bull; <span style="color: var(--sage); font-size: 13px;">${this.currentMovie.certification || 'UA'}</span>`;
+        document.getElementById("details-meta").innerText = `Language: ${this.currentMovie.language} | Duration: ${this.currentMovie.duration} | Base Ticket: Rs. ${this.currentMovie.price.toFixed(2)}`;
+        
+        const synEl = document.getElementById("details-synopsis");
+        if (synEl) synEl.innerText = this.currentMovie.synopsis || "An extraordinary cinematic journey bringing unparalleled storytelling and state-of-the-art visuals to the silver screen.";
+        
+        const castEl = document.getElementById("details-cast");
+        if (castEl) castEl.innerHTML = `<strong>Starring:</strong> ${this.currentMovie.cast || 'Renowned Ensemble Cast'}`;
+
+        const detailsLabel = document.getElementById("details-city-label");
+        if (detailsLabel) detailsLabel.innerText = this.currentCity;
+
+        this.renderCinemaPills();
         this.renderShowtimes();
         this.showScreen("details");
     },
 
+    renderCinemaPills() {
+        document.getElementById("cinema-pills").innerHTML = this.cinemas.map(c => `
+            <button class="genre-pill ${c === this.currentCinema ? 'active' : ''}" onclick="UI.selectCinema('${c.replace(/'/g, "\\'")}')">${c}</button>
+        `).join("");
+    },
+
     selectCinema(c) {
         this.currentCinema = c;
-        this.openDetails(this.currentMovie.title);
+        this.renderCinemaPills();
     },
 
     renderShowtimes() {
@@ -110,11 +202,44 @@ const UI = {
         `).join("");
     },
 
-    // ---------- Interactive Seat Selection ----------
+    // ---------- Movie Trailer Modal ----------
+    openCurrentTrailer() {
+        if (!this.currentMovie) return;
+        this.openTrailer(this.currentMovie.title, this.currentMovie.trailerId || "dQw4w9WgXcQ");
+    },
+
+    openTrailer(title, trailerId) {
+        document.getElementById("trailer-modal-title").innerText = `${title} - Official Trailer`;
+        const iframe = document.getElementById("trailer-iframe");
+        iframe.src = `https://www.youtube-nocookie.com/embed/${trailerId}?autoplay=1&rel=0`;
+        document.getElementById("trailer-modal").style.display = "flex";
+    },
+
+    closeTrailer() {
+        const iframe = document.getElementById("trailer-iframe");
+        iframe.src = "";
+        document.getElementById("trailer-modal").style.display = "none";
+    },
+
+    closeTrailerModal(e) {
+        if (e.target.id === "trailer-modal") {
+            this.closeTrailer();
+        }
+    },
+
+    // ---------- Interactive Seat Selection & Concessions ----------
     async startBooking(time) {
-        this.currentShowTime = `${this.currentCinema} | ${time}`;
+        this.currentShowTime = `${this.currentCinema} (${this.currentCity}) | ${time}`;
         this.selectedSeats = [];
         this.isPremium = false;
+        this.snackCart = { popcorn: 0, nachos: 0, coke: 0, coffee: 0, hotdog: 0 };
+        this.appliedCoupon = null;
+        this.appliedDiscount = 0.0;
+        
+        document.getElementById("coupon-input").value = "";
+        document.getElementById("coupon-msg").innerText = "";
+        document.getElementById("coupon-msg").className = "coupon-msg";
+
         document.getElementById("book-movie-title").innerText = this.currentMovie.title;
         document.getElementById("book-movie-show").innerText = this.currentShowTime;
         document.getElementById("cust-name").value = "";
@@ -128,6 +253,7 @@ const UI = {
 
         this.updateTypeButtons();
         this.renderSeats();
+        this.renderSnacks();
         this.updateBill();
         this.showScreen("booking");
     },
@@ -145,7 +271,7 @@ const UI = {
                 const isBooked = this.bookedSeats.includes(seatName);
                 const isSelected = this.selectedSeats.includes(seatName);
                 const cls = isBooked ? "seat-btn booked" : isSelected ? "seat-btn selected" : "seat-btn";
-                html += `<button class="${cls}" onclick="UI.toggleSeat('${seatName}', ${isBooked})">${seatName}</button>`;
+                html += `<button class="${cls}" onclick="UI.toggleSeat('${seatName}', ${isBooked})" title="Seat ${seatName}">${seatName}</button>`;
             }
             html += `</div>`;
         }
@@ -153,20 +279,135 @@ const UI = {
         document.getElementById("selected-seats-display").innerText = this.selectedSeats.length > 0 ? this.selectedSeats.join(", ") : "None";
     },
 
+    playAudioClick() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(540, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(720, ctx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.05);
+        } catch (e) {}
+    },
+
+    playConfirmationChime() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            notes.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = "triangle";
+                osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + idx * 0.08);
+                osc.stop(ctx.currentTime + idx * 0.08 + 0.25);
+            });
+        } catch (e) {}
+    },
+
     toggleSeat(seatName, isBooked) {
         if (isBooked) return;
+        this.playAudioClick();
         const idx = this.selectedSeats.indexOf(seatName);
         if (idx !== -1) {
             this.selectedSeats.splice(idx, 1);
         } else {
             if (this.selectedSeats.length >= 8) {
-                alert("You can select at most 8 seats.");
+                alert("You can select at most 8 seats per booking transaction.");
                 return;
             }
             this.selectedSeats.push(seatName);
         }
         this.renderSeats();
         this.updateBill();
+    },
+
+    // ---------- Concessions & Promo Codes ----------
+    renderSnacks() {
+        const list = document.getElementById("snacks-list");
+        if (!list) return;
+        list.innerHTML = this.concessions.map(s => `
+            <div class="snack-item">
+                <div class="snack-info">
+                    <span class="snack-icon">${s.icon}</span>
+                    <div>
+                        <div class="snack-name">${s.name}</div>
+                        <div class="snack-price">Rs. ${s.price} &bull; ${s.desc}</div>
+                    </div>
+                </div>
+                <div class="snack-counter">
+                    <button class="snack-count-btn" onclick="UI.changeSnackQty('${s.id}', -1)">-</button>
+                    <span class="snack-qty">${this.snackCart[s.id] || 0}</span>
+                    <button class="snack-count-btn" onclick="UI.changeSnackQty('${s.id}', 1)">+</button>
+                </div>
+            </div>
+        `).join("");
+    },
+
+    changeSnackQty(id, delta) {
+        const current = this.snackCart[id] || 0;
+        const next = Math.max(0, Math.min(10, current + delta));
+        this.snackCart[id] = next;
+        this.playAudioClick();
+        this.renderSnacks();
+        this.updateBill();
+    },
+
+    getSnacksTotal() {
+        return this.concessions.reduce((sum, s) => sum + ((this.snackCart[s.id] || 0) * s.price), 0);
+    },
+
+    getSnacksString() {
+        const items = [];
+        this.concessions.forEach(s => {
+            const q = this.snackCart[s.id] || 0;
+            if (q > 0) items.push(`${s.name} x${q}`);
+        });
+        return items.length > 0 ? items.join(", ") : "None";
+    },
+
+    async applyCoupon() {
+        const input = document.getElementById("coupon-input");
+        const msgEl = document.getElementById("coupon-msg");
+        const code = (input.value || "").trim().toUpperCase();
+
+        if (!code) {
+            this.appliedCoupon = null;
+            this.appliedDiscount = 0.0;
+            msgEl.innerText = "";
+            this.updateBill();
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/coupon?code=${encodeURIComponent(code)}`);
+            const data = await res.json();
+            if (data.valid) {
+                this.appliedCoupon = data.code;
+                this.appliedDiscount = data.discount || data.amount || 50.0;
+                msgEl.innerText = `✓ ${data.code} applied: ${data.desc}`;
+                msgEl.className = "coupon-msg success";
+            } else {
+                this.appliedCoupon = null;
+                this.appliedDiscount = 0.0;
+                msgEl.innerText = `✗ ${data.error || 'Invalid promo code'}`;
+                msgEl.className = "coupon-msg error";
+            }
+            this.updateBill();
+        } catch (e) {
+            msgEl.innerText = "Error verifying coupon code";
+            msgEl.className = "coupon-msg error";
+        }
     },
 
     // ---------- Price Calculations & Form Handling ----------
@@ -182,15 +423,39 @@ const UI = {
     },
 
     updateBill() {
-        const unit = this.currentMovie.price + (this.isPremium ? 100 : 0);
+        const unit = this.currentMovie ? (this.currentMovie.price + (this.isPremium ? 100 : 0)) : 0;
         const count = this.selectedSeats.length;
         const base = count * unit;
+        const snacks = this.getSnacksTotal();
         const fee = count * 10;
-        const gst = (base + fee) * 0.18;
-        const total = base + fee + gst;
+        
+        // Exact match with Ticket.breakdown(unitPrice, qty, discount, snacks):
+        const discountAmount = Math.min(base, this.appliedDiscount);
+        const netBase = Math.max(0, base - discountAmount);
+        const gst = (netBase + fee) * 0.18;
+        const total = (netBase + fee + gst) + snacks;
+
         document.getElementById("bill-base").innerText = `Rs. ${base.toFixed(2)}`;
+        
+        const snacksRow = document.getElementById("bill-snacks-row");
+        if (snacks > 0) {
+            snacksRow.style.display = "flex";
+            document.getElementById("bill-snacks").innerText = `Rs. ${snacks.toFixed(2)}`;
+        } else {
+            snacksRow.style.display = "none";
+        }
+
         document.getElementById("bill-fee").innerText = `Rs. ${fee.toFixed(2)}`;
         document.getElementById("bill-gst").innerText = `Rs. ${gst.toFixed(2)}`;
+
+        const discRow = document.getElementById("bill-discount-row");
+        if (discountAmount > 0) {
+            discRow.style.display = "flex";
+            document.getElementById("bill-discount").innerText = `-Rs. ${discountAmount.toFixed(2)}`;
+        } else {
+            discRow.style.display = "none";
+        }
+
         document.getElementById("bill-total").innerText = `Rs. ${total.toFixed(2)}`;
     },
 
@@ -199,9 +464,23 @@ const UI = {
         const phone = document.getElementById("cust-phone").value.trim();
 
         if (this.selectedSeats.length === 0) {
-            alert("Please select at least one seat.");
+            alert("Please select at least one seat from the cinema seat matrix.");
             return;
         }
+
+        if (!name) {
+            alert("Please enter customer name.");
+            return;
+        }
+
+        if (!phone || phone.length < 10) {
+            alert("Please enter a valid 10-digit mobile number.");
+            return;
+        }
+
+        const unit = this.currentMovie.price + (this.isPremium ? 100 : 0);
+        const base = this.selectedSeats.length * unit;
+        const discountAmount = Math.min(base, this.appliedDiscount);
 
         try {
             const res = await fetch("/api/book", {
@@ -213,29 +492,143 @@ const UI = {
                     premium: this.isPremium.toString(),
                     name: name,
                     phone: phone,
-                    seats: this.selectedSeats
+                    seats: this.selectedSeats,
+                    snacks: this.getSnacksTotal().toString(),
+                    discount: discountAmount.toString()
                 })
             });
 
             const data = await res.json();
             if (data.error) throw new Error(data.error);
 
+            this.lastConfirmedTicket = data;
+            this.playConfirmationChime();
             this.showConfirmation(data);
         } catch (err) {
             alert(err.message);
         }
     },
 
-    showConfirmation(ticket) {
-        document.getElementById("confirm-details").innerHTML = `
-            <div class="price-row"><span>Booking ID</span><b>${ticket.id}</b></div>
-            <div class="price-row"><span>Movie</span><b>${ticket.movie.title}</b></div>
-            <div class="price-row"><span>Show</span><b>${ticket.showTime}</b></div>
-            <div class="price-row"><span>Customer</span><b>${ticket.customer.name} (${ticket.customer.phone})</b></div>
-            <div class="price-row"><span>Seats</span><b>${ticket.seats.join(", ")} (${ticket.type})</b></div>
-            <div class="price-row total"><span>Total Paid</span><b>Rs. ${parseFloat(ticket.total).toFixed(2)}</b></div>
+    generateQrSvg(text) {
+        // Deterministic Luxury SVG QR Code matrix based on booking ID
+        let hash = 0;
+        for (let i = 0; i < text.length; i++) {
+            hash = ((hash << 5) - hash) + text.charCodeAt(i);
+            hash |= 0;
+        }
+        
+        const size = 17;
+        const rects = [];
+        
+        // Standard corner detection squares (top-left, top-right, bottom-left)
+        const addCorner = (r0, c0) => {
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
+                    if (r === 0 || r === 4 || c === 0 || c === 4 || (r >= 1 && r <= 3 && c >= 1 && c <= 3 && (r === 2 || c === 2))) {
+                        rects.push(`<rect x="${c0 + c}" y="${r0 + r}" width="1" height="1" fill="#3A0E12" />`);
+                    }
+                }
+            }
+        };
+        addCorner(1, 1);
+        addCorner(1, 11);
+        addCorner(11, 1);
+
+        // Deterministic data cells
+        for (let r = 1; r < size - 1; r++) {
+            for (let c = 1; c < size - 1; c++) {
+                if ((r < 7 && c < 7) || (r < 7 && c > 9) || (r > 9 && c < 7)) continue;
+                const bit = Math.abs((hash ^ (r * 31 + c * 17)) % 7) > 3;
+                if (bit) {
+                    rects.push(`<rect x="${c}" y="${r}" width="1" height="1" fill="#3A0E12" />`);
+                }
+            }
+        }
+
+        return `<svg viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+            <rect width="${size}" height="${size}" fill="#FFFFFF"/>
+            ${rects.join("")}
+        </svg>`;
+    },
+
+    buildBoardingPassHtml(ticket) {
+        const qrSvg = this.generateQrSvg(ticket.id);
+        const snacksVal = ticket.snacks && parseFloat(ticket.snacks) > 0 ? `Rs. ${parseFloat(ticket.snacks).toFixed(2)}` : "None";
+        const discountVal = ticket.discount && parseFloat(ticket.discount) > 0 ? `-Rs. ${parseFloat(ticket.discount).toFixed(2)}` : "Standard";
+
+        return `
+            <div class="ticket-boarding-pass" id="ticket-boarding-pass">
+                <div class="pass-header">
+                    <div class="pass-brand">LUMIÈRE CINEMAS</div>
+                    <span class="pass-type-badge">${ticket.type} RECLINER</span>
+                </div>
+
+                <div class="pass-movie-title">${ticket.movie.title}</div>
+                <div style="font-size: 12px; color: var(--peach); margin-bottom: 8px;">${ticket.movie.language || 'English'} &bull; ${ticket.movie.duration || '2h 30m'} &bull; ${ticket.movie.certification || 'UA'}</div>
+
+                <div class="pass-grid">
+                    <div>
+                        <div class="pass-label">Cinema & City</div>
+                        <div class="pass-val">${ticket.showTime}</div>
+                    </div>
+                    <div>
+                        <div class="pass-label">Reserved Seats</div>
+                        <div class="pass-val" style="color: var(--gold-light); font-size: 15px;">${ticket.seats.join(", ")}</div>
+                    </div>
+                    <div>
+                        <div class="pass-label">Guest Name</div>
+                        <div class="pass-val">${ticket.customer.name}</div>
+                    </div>
+                    <div>
+                        <div class="pass-label">Phone</div>
+                        <div class="pass-val">${ticket.customer.phone}</div>
+                    </div>
+                    <div>
+                        <div class="pass-label">Concessions Total</div>
+                        <div class="pass-val" style="font-size: 11px;">${snacksVal}</div>
+                    </div>
+                    <div>
+                        <div class="pass-label">Total Amount Paid</div>
+                        <div class="pass-val" style="color: var(--gold-light); font-size: 15px;">Rs. ${parseFloat(ticket.total).toFixed(2)}</div>
+                    </div>
+                </div>
+
+                <div class="pass-perforation"></div>
+
+                <div class="pass-bottom">
+                    <div>
+                        <div style="font-size: 10px; color: var(--peach); letter-spacing: 1px;">BOOKING PASSPORT ID</div>
+                        <div style="font-family: monospace; font-size: 16px; font-weight: bold; letter-spacing: 2px;">${ticket.id}</div>
+                        <div style="font-size: 10px; color: rgba(254,215,184,0.7); margin-top: 4px;">Gate opens 15 mins before showtime</div>
+                    </div>
+                    <div class="pass-qr-wrap" title="Scan at Cinema Turnstile">
+                        ${qrSvg}
+                    </div>
+                </div>
+            </div>
         `;
+    },
+
+    showConfirmation(ticket) {
+        document.getElementById("confirm-pass-preview").innerHTML = this.buildBoardingPassHtml(ticket);
         this.showScreen("confirmed");
+    },
+
+    openPassModal(id) {
+        const ticket = id ? this.bookings.find(b => b.id === id) : this.lastConfirmedTicket;
+        if (!ticket) return;
+        document.getElementById("modal-pass-body").innerHTML = this.buildBoardingPassHtml(ticket);
+        document.getElementById("pass-modal").style.display = "flex";
+    },
+
+    closePassModal(e) {
+        if (!e || e.target.id === "pass-modal" || e.currentTarget.classList.contains("close-modal-btn") || e.currentTarget.tagName === "BUTTON") {
+            document.getElementById("pass-modal").style.display = "none";
+        }
+    },
+
+    printPass() {
+        window.print();
     },
 
     // ---------- Bookings & Receipts ----------
@@ -254,28 +647,32 @@ const UI = {
         const filtered = this.bookings.filter(t =>
             t.id.toLowerCase().includes(q) ||
             t.customer.name.toLowerCase().includes(q) ||
-            t.movie.title.toLowerCase().includes(q)
+            t.movie.title.toLowerCase().includes(q) ||
+            t.showTime.toLowerCase().includes(q)
         );
 
         const tbody = document.getElementById("bookings-table-body");
         document.getElementById("bookings-count").innerText = `${filtered.length} booking(s)`;
         if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--sage); padding: 24px;">No bookings found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--sage); padding: 32px;">No active bookings found.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = filtered.map(t => `
             <tr>
                 <td><b>${t.id}</b></td>
-                <td>${t.movie.title}</td>
-                <td style="font-size: 12px;">${t.showTime}</td>
-                <td>${t.seats.join(", ")}</td>
-                <td><span style="font-size: 11px; padding: 2px 8px; border-radius: 6px; background: var(--cream); font-weight: bold;">${t.type}</span></td>
+                <td><b>${t.movie.title}</b></td>
+                <td style="font-size: 12px; color: var(--sage);">${t.showTime}</td>
+                <td><b style="color: var(--burgundy);">${t.seats.join(", ")}</b></td>
+                <td><span style="font-size: 11px; padding: 3px 8px; border-radius: 6px; background: var(--cream); font-weight: bold;">${t.type}</span></td>
                 <td>${t.customer.name}</td>
                 <td><b>Rs. ${parseFloat(t.total).toFixed(2)}</b></td>
                 <td>
-                    <button class="pill-btn outline" style="padding: 4px 10px; font-size: 11px;" onclick="UI.viewBill('${t.id}')">Bill</button>
-                    <button class="pill-btn outline" style="padding: 4px 10px; font-size: 11px; color: #a32b2b; border-color: #a32b2b;" onclick="UI.cancelBooking('${t.id}')">Cancel</button>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="pill-btn gold" style="padding: 4px 8px; font-size: 11px;" onclick="UI.openPassModal('${t.id}')">Pass</button>
+                        <button class="pill-btn outline" style="padding: 4px 8px; font-size: 11px;" onclick="UI.viewBill('${t.id}')">Bill</button>
+                        <button class="pill-btn outline" style="padding: 4px 8px; font-size: 11px; color: #a32b2b; border-color: #a32b2b;" onclick="UI.cancelBooking('${t.id}')">Cancel</button>
+                    </div>
                 </td>
             </tr>
         `).join("");
@@ -288,17 +685,20 @@ const UI = {
         const unit = t.type === "Premium" ? t.movie.price + 100 : t.movie.price;
         const base = count * unit;
         const fee = count * 10;
-        const gst = (base + fee) * 0.18;
+        const snacksVal = t.snacks ? parseFloat(t.snacks) : 0.0;
+        const discVal = t.discount ? parseFloat(t.discount) : 0.0;
+
         document.getElementById("modal-bill-content").innerHTML = `
             <div class="price-row"><span>Booking ID</span><b>${t.id}</b></div>
             <div class="price-row"><span>Movie</span><b>${t.movie.title}</b></div>
-            <div class="price-row"><span>Show</span><b>${t.showTime}</b></div>
-            <div class="price-row"><span>Customer</span><b>${t.customer.name}</b></div>
+            <div class="price-row"><span>Multiplex & Show</span><b>${t.showTime}</b></div>
+            <div class="price-row"><span>Customer</span><b>${t.customer.name} (${t.customer.phone})</b></div>
             <div class="price-row"><span>Seats</span><b>${t.seats.join(", ")} (${t.type})</b></div>
             <div class="price-row"><span>Base (${count} x Rs. ${unit.toFixed(2)})</span><span>Rs. ${base.toFixed(2)}</span></div>
+            <div class="price-row"><span>F&B Concessions</span><span>Rs. ${snacksVal.toFixed(2)}</span></div>
             <div class="price-row"><span>Convenience Fee</span><span>Rs. ${fee.toFixed(2)}</span></div>
-            <div class="price-row"><span>GST (18%)</span><span>Rs. ${gst.toFixed(2)}</span></div>
-            <div class="price-row total"><span>Total Amount</span><b>Rs. ${parseFloat(t.total).toFixed(2)}</b></div>
+            <div class="price-row"><span>Discount Applied</span><span>-Rs. ${discVal.toFixed(2)}</span></div>
+            <div class="price-row total"><span>Total Amount Paid</span><b>Rs. ${parseFloat(t.total).toFixed(2)}</b></div>
         `;
         document.getElementById("bill-modal").style.display = "flex";
     },
@@ -308,7 +708,7 @@ const UI = {
     },
 
     async cancelBooking(id) {
-        if (!confirm(`Cancel booking ${id}? Its seats will be freed immediately.`)) return;
+        if (!confirm(`Cancel booking ${id}? Its seats will be freed immediately and refund will be processed.`)) return;
         try {
             const res = await fetch("/api/cancel", {
                 method: "POST",
@@ -336,19 +736,19 @@ const UI = {
                 </div>
                 <div class="stat-card">
                     <div class="stat-val">${data.seats}</div>
-                    <div class="stat-name">Seats Booked</div>
+                    <div class="stat-name">Seats Occupied</div>
                 </div>
                 <div class="stat-card featured">
                     <div class="stat-val">Rs. ${data.revenue.toFixed(2)}</div>
-                    <div class="stat-name">Total Revenue</div>
+                    <div class="stat-name">Total Gross Revenue</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-val">${data.created}</div>
-                    <div class="stat-name">Tickets Created (Counter)</div>
+                    <div class="stat-name">Tickets Generated (Counter)</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-val">${data.gst}%</div>
-                    <div class="stat-name">GST Rate</div>
+                    <div class="stat-name">GST Tax Rate</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-val">Rs. ${data.fee.toFixed(2)}</div>
