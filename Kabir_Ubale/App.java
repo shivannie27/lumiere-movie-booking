@@ -152,6 +152,39 @@ public class App {
             sendJson(exchange, 200, json);
         });
 
+        server.createContext("/api/server-info", exchange -> {
+            String hostIp = "localhost";
+            try {
+                hostIp = java.net.InetAddress.getLocalHost().getHostAddress();
+            } catch (Exception ignored) {}
+            String json = String.format("{\"host\":\"%s\",\"port\":%d}", hostIp, port);
+            sendJson(exchange, 200, json);
+        });
+
+        server.createContext("/ticket", exchange -> {
+            String query = exchange.getRequestURI().getQuery();
+            Map<String, String> params = parseQuery(query);
+            String id = params.getOrDefault("id", "").trim();
+
+            Ticket ticket = null;
+            if (!id.isEmpty()) {
+                for (Ticket t : store.search("")) {
+                    if (t.getBookingId().equalsIgnoreCase(id)) {
+                        ticket = t;
+                        break;
+                    }
+                }
+            }
+
+            String html = renderStandaloneTicketHtml(ticket, id, port);
+            byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
+        });
+
         // Multi-folder Static Web Asset Handler (serves assets directly from teammate folders)
         server.createContext("/", new MultiFolderFileHandler());
 
@@ -270,6 +303,83 @@ public class App {
             exchange.sendResponseHeaders(200, bytes.length);
             try (OutputStream os = exchange.getResponseBody()) { os.write(bytes); }
         }
+    }
+
+    private static String renderStandaloneTicketHtml(Ticket ticket, String searchId, int port) {
+        if (ticket == null) {
+            return "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                "<title>Ticket Verification - Lumière Cinemas</title>" +
+                "<style>body{font-family:system-ui,sans-serif;background:#26070A;color:#FED7B8;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;}" +
+                ".card{background:#3A0E12;border:1px solid #59171B;border-radius:18px;padding:36px;max-width:440px;width:100%;box-shadow:0 12px 36px rgba(0,0,0,0.4);}" +
+                ".badge{background:#D32F2F;color:#fff;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:bold;display:inline-block;margin-bottom:16px;}" +
+                "a{color:#FED7B8;font-weight:bold;text-decoration:none;border-bottom:1px solid #FED7B8;}</style></head><body>" +
+                "<div class='card'>" +
+                "<div class='badge'>ENTRY INVALID / NOT FOUND</div>" +
+                "<h2 style='font-family:Georgia,serif;margin:0 0 10px;color:#fff;'>Ticket ID Not Found</h2>" +
+                "<p style='color:#DAEBE3;font-size:14px;line-height:1.6;'>No active reservation was found matching reference <code>" + (searchId != null ? searchId : "") + "</code>. The ticket may have been cancelled or the reference code is invalid.</p>" +
+                "<p style='margin-top:24px;'><a href='/'>&larr; Return to Lumière Cinemas</a></p>" +
+                "</div></body></html>";
+        }
+
+        String seats = String.join(", ", ticket.getSeats());
+        String snacks = ticket.getSnacksTotal() > 0 ? String.format(java.util.Locale.US, "Rs. %.2f", ticket.getSnacksTotal()) : "None";
+        String discount = ticket.getDiscountAmount() > 0 ? String.format(java.util.Locale.US, "-Rs. %.2f", ticket.getDiscountAmount()) : "Standard Rate";
+
+        return "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+            "<title>" + ticket.getMovie().getTitle() + " - Lumière Cinema Pass</title>" +
+            "<style>" +
+            ":root{--burgundy:#59171B;--deep:#26070A;--dark:#3A0E12;--peach:#FED7B8;--gold:#D4AF37;--gold-lt:#F9E79F;--mint:#DAEBE3;}" +
+            "* {box-sizing:border-box;margin:0;padding:0;}" +
+            "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--deep);color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;}" +
+            ".pass-wrapper{max-width:440px;width:100%;margin:0 auto;}" +
+            ".verified-pill{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(46,125,50,0.2);border:1px solid #2E7D32;color:#81C784;padding:8px 16px;border-radius:999px;font-size:12px;font-weight:bold;margin-bottom:18px;letter-spacing:0.5px;}" +
+            ".pulse-dot{width:8px;height:8px;border-radius:50%;background:#4CAF50;box-shadow:0 0 8px #4CAF50;}" +
+            ".pass-card{background:linear-gradient(145deg, var(--dark), var(--burgundy));border:1px solid rgba(254,215,184,0.3);border-radius:22px;padding:28px;position:relative;box-shadow:0 18px 48px rgba(0,0,0,0.5);overflow:hidden;}" +
+            ".pass-card::before,.pass-card::after{content:'';position:absolute;width:24px;height:24px;background:var(--deep);border-radius:50%;top:68%;}" +
+            ".pass-card::before{left:-12px;}.pass-card::after{right:-12px;}" +
+            ".pass-brand{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(254,215,184,0.25);padding-bottom:12px;margin-bottom:16px;}" +
+            ".brand-title{font-family:Georgia,serif;font-size:22px;font-weight:bold;color:var(--peach);letter-spacing:1px;}" +
+            ".tier-tag{background:var(--peach);color:var(--burgundy);font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;text-transform:uppercase;}" +
+            ".movie-head{font-family:Georgia,serif;font-size:22px;color:#fff;margin-bottom:4px;line-height:1.3;}" +
+            ".movie-sub{font-size:12px;color:var(--peach);margin-bottom:18px;}" +
+            ".info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}" +
+            ".info-label{font-size:10px;color:rgba(254,215,184,0.7);text-transform:uppercase;letter-spacing:0.5px;}" +
+            ".info-val{font-size:13px;font-weight:600;margin-top:2px;color:#fff;}" +
+            ".info-val.gold{color:var(--gold-lt);font-size:15px;font-weight:bold;}" +
+            ".perforation{border-top:1px dashed rgba(254,215,184,0.35);margin:18px 0 16px;}" +
+            ".pass-foot{display:flex;justify-content:space-between;align-items:center;}" +
+            ".actions{display:flex;gap:10px;margin-top:20px;}" +
+            ".btn{flex:1;padding:12px;border-radius:999px;font-size:13px;font-weight:bold;cursor:pointer;text-align:center;text-decoration:none;transition:all 0.2s;}" +
+            ".btn-gold{background:linear-gradient(135deg,var(--gold),#B8860B);color:#1E0A0C;border:none;}" +
+            ".btn-outline{border:1px solid rgba(254,215,184,0.6);color:var(--peach);background:transparent;}" +
+            "@media print{body{background:#fff;color:#000;padding:0;}.verified-pill,.actions{display:none;}.pass-card{background:#26070A !important;color:#fff !important;box-shadow:none;}}" +
+            "</style></head><body>" +
+            "<div class='pass-wrapper'>" +
+            "<div class='verified-pill'><span class='pulse-dot'></span> TURNSTILE ENTRY VERIFIED &bull; OFFICIAL E-PASS</div>" +
+            "<div class='pass-card'>" +
+            "<div class='pass-brand'>" +
+            "<div class='brand-title'>LUMIÈRE CINEMAS</div>" +
+            "<div class='tier-tag'>" + ticket.getType() + " RECLINER</div>" +
+            "</div>" +
+            "<div class='movie-head'>" + ticket.getMovie().getTitle() + "</div>" +
+            "<div class='movie-sub'>" + ticket.getMovie().getLanguage() + " &bull; " + ticket.getMovie().getDurationText() + " &bull; " + ticket.getMovie().getCertification() + "</div>" +
+            "<div class='info-grid'>" +
+            "<div><div class='info-label'>Cinema & Screen</div><div class='info-val'>" + ticket.getShowTime() + "</div></div>" +
+            "<div><div class='info-label'>Reserved Seats</div><div class='info-val gold'>" + seats + "</div></div>" +
+            "<div><div class='info-label'>Guest Name</div><div class='info-val'>" + ticket.getCustomer().getName() + "</div></div>" +
+            "<div><div class='info-label'>Phone</div><div class='info-val'>" + ticket.getCustomer().getPhone() + "</div></div>" +
+            "<div><div class='info-label'>F&B Concessions</div><div class='info-val'>" + snacks + "</div></div>" +
+            "<div><div class='info-label'>Total Amount Paid</div><div class='info-val gold'>Rs. " + String.format(java.util.Locale.US, "%.2f", ticket.calculateBill()) + "</div></div>" +
+            "</div>" +
+            "<div class='perforation'></div>" +
+            "<div class='pass-foot'>" +
+            "<div><div class='info-label'>BOOKING PASSPORT ID</div><div style='font-family:monospace;font-size:16px;font-weight:bold;letter-spacing:2px;color:var(--gold-lt);'>" + ticket.getBookingId() + "</div><div style='font-size:10px;color:rgba(254,215,184,0.6);margin-top:4px;'>Present at cinema turnstile</div></div>" +
+            "<div style='background:#fff;padding:6px;border-radius:8px;'><img src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=2&data=http://localhost:" + port + "/ticket?id=" + ticket.getBookingId() + "' width='64' height='64' alt='QR' style='display:block;'></div>" +
+            "</div></div>" +
+            "<div class='actions'>" +
+            "<button class='btn btn-gold' onclick='window.print()'>🖨️ Print Pass</button>" +
+            "<a class='btn btn-outline' href='/'>&larr; Main App</a>" +
+            "</div></div></body></html>";
     }
 
     private static void runConsoleDemo() {

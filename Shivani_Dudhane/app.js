@@ -36,8 +36,19 @@ const UI = {
     genres: ["All", "Action", "Comedy", "Drama", "Sci-Fi", "Animation", "Thriller"],
 
     async init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const ticketParam = urlParams.get("ticket") || urlParams.get("id");
+        if (ticketParam) {
+            window.location.href = `/ticket?id=${encodeURIComponent(ticketParam)}`;
+            return;
+        }
+
         this.renderGenres();
         this.renderSnacks();
+        try {
+            const sRes = await fetch("/api/server-info");
+            this.serverInfo = await sRes.json();
+        } catch (e) {}
         await this.loadCities();
         await this.loadMovies();
         this.showScreen("home");
@@ -552,7 +563,13 @@ const UI = {
     },
 
     buildBoardingPassHtml(ticket) {
-        const qrSvg = this.generateQrSvg(ticket.id);
+        const host = (this.serverInfo && this.serverInfo.host && !this.serverInfo.host.startsWith("127.")) 
+            ? this.serverInfo.host 
+            : window.location.hostname;
+        const port = (this.serverInfo && this.serverInfo.port) ? this.serverInfo.port : (window.location.port || 8080);
+        const ticketUrl = `http://${host}:${port}/ticket?id=${ticket.id}`;
+        const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=2&data=${encodeURIComponent(ticketUrl)}`;
+        const fallbackSvg = this.generateQrSvg(ticket.id);
         const snacksVal = ticket.snacks && parseFloat(ticket.snacks) > 0 ? `Rs. ${parseFloat(ticket.snacks).toFixed(2)}` : "None";
         const discountVal = ticket.discount && parseFloat(ticket.discount) > 0 ? `-Rs. ${parseFloat(ticket.discount).toFixed(2)}` : "Standard";
 
@@ -601,9 +618,12 @@ const UI = {
                         <div style="font-family: monospace; font-size: 16px; font-weight: bold; letter-spacing: 2px;">${ticket.id}</div>
                         <div style="font-size: 10px; color: rgba(254,215,184,0.7); margin-top: 4px;">Gate opens 15 mins before showtime</div>
                     </div>
-                    <div class="pass-qr-wrap" title="Scan at Cinema Turnstile">
-                        ${qrSvg}
-                    </div>
+                    <a href="${ticketUrl}" target="_blank" title="Scan with Phone Camera or Click to Open Live Ticket" style="display: flex; flex-direction: column; align-items: center; text-decoration: none;">
+                        <div class="pass-qr-wrap" style="cursor: pointer;">
+                            <img src="${qrImgSrc}" alt="QR" width="64" height="64" style="display: block; border-radius: 4px;" onerror="this.onerror=null; this.parentElement.innerHTML=\`${fallbackSvg.replace(/`/g, "\\`")}\`;">
+                        </div>
+                        <span style="font-size: 9px; color: var(--peach); margin-top: 4px; font-weight: 600; text-decoration: underline;">📱 Scan / Click</span>
+                    </a>
                 </div>
             </div>
         `;
