@@ -562,10 +562,10 @@ const UI = {
         </svg>`;
     },
 
-    qrMode: 'camera',
+    qrMode: 'web',
 
     toggleQrMode(ticketId) {
-        this.qrMode = this.qrMode === 'camera' ? 'web' : 'camera';
+        this.qrMode = this.qrMode === 'web' ? 'camera' : 'web';
         const t = (this.bookings && this.bookings.find(b => b.id === ticketId)) || this.lastConfirmedTicket;
         if (t) {
             const preview = document.getElementById("confirm-pass-preview");
@@ -664,14 +664,22 @@ const UI = {
         `;
     },
 
-    showConfirmation(ticket) {
+    async showConfirmation(ticket) {
+        try {
+            const sRes = await fetch("/api/server-info");
+            this.serverInfo = await sRes.json();
+        } catch (e) {}
         document.getElementById("confirm-pass-preview").innerHTML = this.buildBoardingPassHtml(ticket);
         this.showScreen("confirmed");
     },
 
-    openPassModal(id) {
+    async openPassModal(id) {
         const ticket = id ? this.bookings.find(b => b.id === id) : this.lastConfirmedTicket;
         if (!ticket) return;
+        try {
+            const sRes = await fetch("/api/server-info");
+            this.serverInfo = await sRes.json();
+        } catch (e) {}
         document.getElementById("modal-pass-body").innerHTML = this.buildBoardingPassHtml(ticket);
         document.getElementById("pass-modal").style.display = "flex";
     },

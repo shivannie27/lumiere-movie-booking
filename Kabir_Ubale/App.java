@@ -153,10 +153,7 @@ public class App {
         });
 
         server.createContext("/api/server-info", exchange -> {
-            String hostIp = "localhost";
-            try {
-                hostIp = java.net.InetAddress.getLocalHost().getHostAddress();
-            } catch (Exception ignored) {}
+            String hostIp = findBestHostIp();
             String json = String.format("{\"host\":\"%s\",\"port\":%d}", hostIp, port);
             sendJson(exchange, 200, json);
         });
@@ -380,6 +377,36 @@ public class App {
             "<button class='btn btn-gold' onclick='window.print()'>🖨️ Print Pass</button>" +
             "<a class='btn btn-outline' href='/'>&larr; Main App</a>" +
             "</div></div></body></html>";
+    }
+
+    public static String findBestHostIp() {
+        try {
+            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+            String fallbackCandidate = null;
+            while (interfaces.hasMoreElements()) {
+                java.net.NetworkInterface nif = interfaces.nextElement();
+                if (nif.isLoopback() || !nif.isUp()) continue;
+                java.util.Enumeration<java.net.InetAddress> addrs = nif.getInetAddresses();
+                while (addrs.hasMoreElements()) {
+                    java.net.InetAddress addr = addrs.nextElement();
+                    if (addr instanceof java.net.Inet4Address && !addr.isLoopbackAddress()) {
+                        String ip = addr.getHostAddress();
+                        // Top priority: Mobile Hotspot subnets (Android 192.168.43.*, iOS 172.20.10.*)
+                        if (ip.startsWith("192.168.43.") || ip.startsWith("172.20.10.")) {
+                            return ip;
+                        }
+                        // Secondary priority: Standard LAN/Wi-Fi
+                        if (fallbackCandidate == null && (ip.startsWith("192.168.") || ip.startsWith("10.") || ip.startsWith("172."))) {
+                            fallbackCandidate = ip;
+                        }
+                    }
+                }
+            }
+            if (fallbackCandidate != null) return fallbackCandidate;
+            return java.net.InetAddress.getLocalHost().getHostAddress();
+        } catch (Exception e) {
+            return "localhost";
+        }
     }
 
     private static void runConsoleDemo() {
