@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumière Cinemas — Project Report & Documentation</title>
+    <style>
+        :root {
+            --burgundy: #59171B;
+            --dark-burgundy: #3A0E12;
+            --peach: #FED7B8;
+            --cream: #FDF9F6;
+            --sage: #657166;
+            --text: #2B0F0A;
+            --border: #E8DCD5;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--cream);
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 60px 80px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid var(--burgundy);
+            padding-bottom: 24px;
+            margin-bottom: 36px;
+        }
+        .header h1 {
+            font-family: Georgia, serif;
+            font-size: 34px;
+            color: var(--burgundy);
+            margin: 0 0 8px;
+        }
+        .header .subtitle {
+            font-size: 16px;
+            color: var(--sage);
+            font-weight: 500;
+        }
+        .meta-box {
+            background: #FFF7F2;
+            border: 1px solid var(--peach);
+            border-radius: 8px;
+            padding: 16px 24px;
+            margin-bottom: 36px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            font-size: 14px;
+        }
+        h2 {
+            font-family: Georgia, serif;
+            color: var(--burgundy);
+            font-size: 22px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 6px;
+            margin-top: 36px;
+        }
+        h3 {
+            color: var(--dark-burgundy);
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        p, li {
+            font-size: 14.5px;
+            color: #333;
+        }
+        ul, ol {
+            padding-left: 24px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        th {
+            background: var(--burgundy);
+            color: #fff;
+        }
+        tr:nth-child(even) {
+            background: #FAF6F3;
+        }
+        .code-box {
+            background: #2B0F0A;
+            color: #FED7B8;
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+        .btn-print {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--burgundy);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-print:hover {
+            background: var(--dark-burgundy);
+            transform: translateY(-2px);
+        }
+        @media print {
+            body { background: #fff; padding: 0; }
+            .container { box-shadow: none; border: none; padding: 0; max-width: 100%; }
+            .btn-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+
+    <div class="container">
+        <div class="header">
+            <h1>Lumière Cinemas</h1>
+            <div class="subtitle">Web-Based Cinema Ticketing & Reservation System</div>
+            <div style="font-size: 13px; color: #888; margin-top: 6px;">Unit 2: Object-Oriented Programming with Java • Group 5 • BNCOE Pusad</div>
+        </div>
+
+        <div class="meta-box">
+            <div><b>Lead Architect & Backend:</b> Kabir Ubale</div>
+            <div><b>Course & Branch:</b> OOP with Java (Unit 2)</div>
+            <div><b>Domain Model & Frontend:</b> Shaikh Rahim</div>
+            <div><b>Target Platform:</b> Web Application (JDK 11+)</div>
+            <div><b>Customer & CSS Styling:</b> Shruti Wadhonkar</div>
+            <div><b>Repository:</b> github.com/shivannie27/lumiere-movie-booking</div>
+            <div><b>Billing & Scripting Controller:</b> Shivani Dudhane</div>
+            <div><b>Date:</b> Academic Term 2026</div>
+        </div>
+
+        <h2>1. Abstract & Executive Summary</h2>
+        <p>
+            The <b>Lumière Cinema Booking System</b> is a full-stack, modular web application developed as part of the Object-Oriented Programming (OOP) curriculum in Java. The project solves a traditional software engineering challenge: transitioning bulky, platform-dependent desktop user interfaces (Java Swing) into an elegant, high-performance web client without abandoning pure Java as the primary backend engine.
+        </p>
+        <p>
+            The backend leverages the standard Java HTTP Server (<code>com.sun.net.httpserver.HttpServer</code>) with zero third-party framework overhead. The client presents a modern, responsive single-page cinema booking experience featuring interactive seat matrices, live tax calculations, customer verification, and transactional booking management.
+        </p>
+
+        <h2>2. Team Architecture & Module Ownership</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Team Member</th>
+                    <th>Role</th>
+                    <th>Key Modules & Artifacts</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><b>Kabir Ubale</b></td>
+                    <td>Lead Architecture & Backend Core</td>
+                    <td><code>App.java</code>, <code>BookingStore.java</code>, <code>run_lumiere.bat</code></td>
+                </tr>
+                <tr>
+                    <td><b>Shaikh Rahim</b></td>
+                    <td>Movie Catalog & Frontend Layout</td>
+                    <td><code>Movie.java</code>, <code>index.html</code>, <code>posters/</code></td>
+                </tr>
+                <tr>
+                    <td><b>Shruti Wadhonkar</b></td>
+                    <td>Customer Domain & UI Styling</td>
+                    <td><code>Customer.java</code>, <code>style.css</code></td>
+                </tr>
+                <tr>
+                    <td><b>Shivani Dudhane</b></td>
+                    <td>Billing Engine & Client Controller</td>
+                    <td><code>Ticket.java</code>, <code>PremiumTicket.java</code>, <code>app.js</code></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>3. Object-Oriented Programming (OOP) Implementation</h2>
+        <p>The system serves as an exemplary demonstration of core OOP principles:</p>
+        
+        <h3>A. Encapsulation & Robust Validation</h3>
+        <p>
+            All domain entity fields (movie title, seat count, price, phone) are strictly declared <code>private</code>. Data mutators implement defensive boundary validation:
+        </p>
+        <ul>
+            <li><b>Customer Phone Number:</b> Enforced using regular expressions (<code>^\d{10}$</code>) to guarantee exactly 10 numeric digits.</li>
+            <li><b>Ticket Seat Arrays:</b> Defensive cloning (<code>seats.clone()</code>) ensures external callers cannot mutate internal state.</li>
+        </ul>
+
+        <h3>B. Object Composition</h3>
+        <p>
+            The project models realistic business entities through composition (<code>HAS-A</code> relationship) rather than fragile inheritance:
+        </p>
+        <ul>
+            <li><code>Ticket</code> <b>HAS-A</b> <code>Movie</code></li>
+            <li><code>Ticket</code> <b>HAS-A</b> <code>Customer</code></li>
+        </ul>
+
+        <h3>C. Inheritance & Polymorphism</h3>
+        <p>
+            The <code>PremiumTicket</code> class extends the base <code>Ticket</code> class (<code>IS-A</code> relationship), representing luxury recliner seating:
+        </p>
+        <div class="code-box">public class PremiumTicket extends Ticket {
+    public static final double RECLINER_FEE = 100.0;
+
+    @Override
+    public double calculateBill() {
+        double reclinerTotal = getSeats().length * RECLINER_FEE;
+        return super.calculateBill() + (reclinerTotal * gstMultiplier());
+    }
+}</div>
+        <p>
+            The central <code>BookingStore</code> calculates financial revenue polymorphically by invoking <code>ticket.calculateBill()</code> without needing to inspect runtime object types.
+        </p>
+
+        <h3>D. Static Members & Centralized Configuration</h3>
+        <p>
+            Class-level <code>static</code> variables are utilized for theater-wide properties such as <code>THEATRE_NAME</code>, <code>GST_PERCENT</code> (18.0%), <code>CONVENIENCE_FEE</code> (Rs. 10.00), and a global atomic booking counter.
+        </p>
+
+        <h2>4. Backend & Concurrency Architecture</h2>
+        <h3>Embedded HTTP Web Server</h3>
+        <p>
+            Developed by <b>Kabir Ubale</b> in <code>App.java</code>, the server exposes lightweight JSON REST endpoints:
+        </p>
+        <ul>
+            <li><code>GET /api/movies</code>: Delivers active movie catalog with metadata and poster paths.</li>
+            <li><code>GET /api/booked-seats?movie=...&show=...</code>: Returns array of occupied seats for the selected showtime.</li>
+            <li><code>POST /api/book</code>: Processes atomic ticket reservation and validation.</li>
+            <li><code>POST /api/cancel</code>: Releases seats and removes booking by ID.</li>
+            <li><code>GET /api/summary</code>: Aggregates real-time KPIs (Total Revenue, Active Seats, Booking Counts).</li>
+        </ul>
+
+        <h3>Thread-Safe Seat Collision Prevention</h3>
+        <p>
+            All state mutations in <code>BookingStore.java</code> utilize method-level synchronization (<code>synchronized</code>) to prevent race conditions when multiple users attempt to reserve adjacent seats concurrently.
+        </p>
+
+        <h2>5. Verification, Testing & Results</h2>
+        <p>The system was tested through automated console verification assertions:</p>
+        <div class="code-box">=== LUMIÈRE CINEMA BOOKING ENGINE - CORE TEST ===
+Regular Ticket Bill: Rs. 448.40  (Dune 2, 2 seats)
+Premium Ticket Bill: Rs. 684.40  (Recliner surcharge + 18% GST)
+Total Seats Booked: 4
+Total Revenue: Rs. 1132.80
+After Cancellation - Active Bookings: 1
+Is Seat E5 Booked?: false  [Seat freed successfully]</div>
+        <p>
+            <b>Outcome:</b> All validation boundaries, calculation formulas, and concurrency checks executed with 100% precision.
+        </p>
+
+        <h2>6. Conclusion</h2>
+        <p>
+            The Lumière project successfully achieves its goal of providing an enterprise-grade cinema booking platform. By coupling a pure Java backend with an aesthetic web interface, the team demonstrated robust software engineering practices, clean Git collaboration, and complete mastery of Object-Oriented Programming.
+        </p>
+    </div>
+
+</body>
+</html>
