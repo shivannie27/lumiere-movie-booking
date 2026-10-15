@@ -3,14 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lumière Cinemas - Java Web App</title>
+    <title>Lumière Cinemas - Premium Movie Booking Experience</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <!-- Top Navigation Header -->
     <header>
-        <div class="brand">Lumière</div>
+        <div class="brand-group">
+            <div class="brand" onclick="UI.showScreen('home')">Lumière <span>Cinemas</span></div>
+            <div class="city-pill">
+                <span>📍</span>
+                <select id="city-selector" onchange="UI.changeCity(this.value)" title="Choose City">
+                    <option value="Bengaluru">Bengaluru</option>
+                    <option value="Mumbai">Mumbai</option>
+                    <option value="Delhi NCR">Delhi NCR</option>
+                    <option value="Pune">Pune</option>
+                    <option value="Hyderabad">Hyderabad</option>
+                </select>
+            </div>
+        </div>
         <nav class="nav-pills">
             <button class="pill-btn active" id="nav-home" onclick="UI.showScreen('home')">Home</button>
             <button class="pill-btn" id="nav-bookings" onclick="UI.showScreen('bookings')">My Bookings</button>
@@ -19,19 +31,26 @@
     </header>
 
     <main>
-        <!-- Home Screen: Hero Banner, Filters, Movie Cards with Real Posters -->
+        <!-- Home Screen: Hero Banner, City Status, Filters, Movie Cards with Real Posters -->
         <section id="screen-home" class="screen active">
             <div class="hero">
-                <span class="hero-tag">More Movies. More Magic.</span>
+                <span class="hero-tag">Cinematic Excellence &bull; Pure Luxury</span>
                 <h1>Your Next Favourite Movie Awaits</h1>
-                <input type="text" id="movie-search" class="search-input" placeholder="Search for movies..." oninput="UI.filterMovies()">
+                <div class="search-bar-wrap">
+                    <input type="text" id="movie-search" class="search-input" placeholder="Search by title, genre or actors..." oninput="UI.filterMovies()">
+                </div>
             </div>
-            <h2 style="font-family: Georgia, serif; font-size: 20px;">Now Showing</h2>
+
+            <div class="section-head">
+                <h2 class="section-title">Now Showing in <span id="current-city-heading">Bengaluru</span></h2>
+                <span class="city-badge-tag" id="city-status-badge">📍 All Multiplexes Active</span>
+            </div>
+
             <div class="genre-bar" id="genre-bar"></div>
             <div class="movies-grid" id="movies-grid"></div>
         </section>
 
-        <!-- Movie Details Screen with High-Res Poster -->
+        <!-- Movie Details Screen with High-Res Poster, Synopsis, Cast, Trailers & City Multiplexes -->
         <section id="screen-details" class="screen">
             <button class="pill-btn outline" onclick="UI.showScreen('home')">&larr; Back to Movies</button>
             <div class="details-box">
@@ -39,46 +58,89 @@
                     <img id="details-poster-img" class="details-poster-img" src="" alt="Poster">
                 </div>
                 <div class="details-content">
-                    <h1 id="details-title" style="font-family: Georgia, serif; font-size: 28px;"></h1>
-                    <p id="details-rating" style="font-weight: bold; margin: 6px 0;"></p>
+                    <div class="details-header-row">
+                        <div>
+                            <h1 id="details-title" style="font-family: Georgia, serif; font-size: 30px; color: var(--burgundy);"></h1>
+                            <p id="details-rating" style="font-weight: bold; margin: 6px 0; color: #D4AF37;"></p>
+                        </div>
+                        <button class="pill-btn gold" id="btn-watch-trailer" onclick="UI.openCurrentTrailer()">▶ Watch Trailer</button>
+                    </div>
+
+                    <div class="format-tags" id="details-formats">
+                        <span class="format-tag">2D</span>
+                        <span class="format-tag">IMAX 4K</span>
+                        <span class="format-tag">DOLBY ATMOS</span>
+                    </div>
+
                     <p id="details-meta" style="color: var(--sage); font-size: 13px; line-height: 1.8;"></p>
-                    <div style="margin: 20px 0;">
-                        <h3 style="font-size: 15px; margin-bottom: 8px;">Select Cinema</h3>
+                    
+                    <p id="details-synopsis" class="synopsis-text"></p>
+                    <div id="details-cast" class="cast-row"></div>
+
+                    <div style="margin: 16px 0;">
+                        <h3 style="font-size: 14px; margin-bottom: 8px;">Select Multiplex in <span id="details-city-label" style="color: var(--burgundy); font-weight: bold;">Bengaluru</span>:</h3>
                         <div class="genre-bar" id="cinema-pills" style="margin: 0;"></div>
                     </div>
                     <div>
-                        <h3 style="font-size: 15px; margin-bottom: 8px;">Available Show Times</h3>
+                        <h3 style="font-size: 14px; margin-bottom: 8px;">Available Show Times:</h3>
                         <div class="times-group" id="showtime-pills"></div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Interactive Seat Grid & Booking Screen -->
+        <!-- Interactive Seat Grid & Booking Screen with Concessions and Promo Code -->
         <section id="screen-booking" class="screen">
             <button class="pill-btn outline" style="margin-bottom: 16px;" onclick="UI.showScreen('details')">&larr; Back</button>
             <div class="booking-layout">
-                <!-- Left: Pricing Breakdown -->
+                <!-- Left: Pricing Breakdown, Snacks & Promo Codes -->
                 <div class="card-panel">
-                    <h3 id="book-movie-title" style="font-size: 18px; margin-bottom: 4px;"></h3>
-                    <p id="book-movie-show" style="color: var(--sage); font-size: 12px; margin-bottom: 16px;"></p>
+                    <h3 id="book-movie-title" style="font-size: 17px; margin-bottom: 4px; color: var(--burgundy);"></h3>
+                    <p id="book-movie-show" style="color: var(--sage); font-size: 12px; margin-bottom: 14px;"></p>
                     
-                    <label style="font-size: 12px; font-weight: bold;">Ticket Type</label>
-                    <div style="display: flex; gap: 8px; margin: 8px 0 16px;">
-                        <button class="pill-btn filled" id="btn-type-regular" onclick="UI.setTicketType(false)">Regular</button>
-                        <button class="pill-btn outline" id="btn-type-premium" onclick="UI.setTicketType(true)">Premium</button>
+                    <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 6px;">Ticket Tier</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <button class="pill-btn filled" id="btn-type-regular" style="flex: 1;" onclick="UI.setTicketType(false)">Regular</button>
+                        <button class="pill-btn outline" id="btn-type-premium" style="flex: 1;" onclick="UI.setTicketType(true)">Premium</button>
                     </div>
-                    <small style="color: var(--sage); display: block; margin-bottom: 16px;">Premium = recliner seats (+Rs. 100/seat)</small>
+                    <small style="color: var(--sage); display: block; margin-bottom: 14px; line-height: 1.4;">Premium includes luxury leather recliner seats (+Rs. 100/seat)</small>
 
-                    <div class="price-row"><span>Base Price</span><span id="bill-base">Rs. 0.00</span></div>
-                    <div class="price-row"><span>Convenience Fee</span><span id="bill-fee">Rs. 0.00</span></div>
-                    <div class="price-row"><span>GST (18%)</span><span id="bill-gst">Rs. 0.00</span></div>
-                    <div class="price-row total"><span>Total</span><span id="bill-total">Rs. 0.00</span></div>
+                    <!-- Theater Concessions F&B Section -->
+                    <div class="snacks-section">
+                        <label style="font-size: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                            <span>🍿 Cinema Concessions</span>
+                            <small style="color: var(--sage); font-weight: normal;">Optional</small>
+                        </label>
+                        <div class="snacks-grid" id="snacks-list"></div>
+                    </div>
+
+                    <!-- Discount Coupon Promo Code -->
+                    <div class="coupon-box">
+                        <label style="font-size: 12px; font-weight: bold;">Promo Code</label>
+                        <div class="coupon-input-group">
+                            <input type="text" id="coupon-input" class="coupon-input" placeholder="e.g. LUMIERE50" maxlength="15">
+                            <button class="pill-btn outline" style="padding: 6px 14px; font-size: 12px;" onclick="UI.applyCoupon()">Apply</button>
+                        </div>
+                        <div id="coupon-msg" class="coupon-msg"></div>
+                    </div>
+
+                    <!-- Itemized Live Bill Breakdown -->
+                    <div style="margin-top: 14px;">
+                        <div class="price-row"><span>Tickets Base</span><span id="bill-base">Rs. 0.00</span></div>
+                        <div class="price-row" id="bill-snacks-row" style="display: none;"><span>F&B Concessions</span><span id="bill-snacks">Rs. 0.00</span></div>
+                        <div class="price-row"><span>Convenience Fee</span><span id="bill-fee">Rs. 0.00</span></div>
+                        <div class="price-row"><span>GST (18%)</span><span id="bill-gst">Rs. 0.00</span></div>
+                        <div class="price-row discount" id="bill-discount-row" style="display: none;"><span>Promo Discount</span><span id="bill-discount">-Rs. 0.00</span></div>
+                        <div class="price-row total"><span>Total Payable</span><span id="bill-total">Rs. 0.00</span></div>
+                    </div>
                 </div>
 
-                <!-- Middle: Interactive Seat Matrix -->
+                <!-- Middle: Interactive Seat Matrix with Projector Ambient Glow -->
                 <div class="card-panel">
-                    <div class="screen-bar">S C R E E N</div>
+                    <div class="screen-container">
+                        <div class="screen-projector-glow"></div>
+                        <div class="screen-bar">S C R E E N</div>
+                    </div>
                     <div class="seat-matrix" id="seat-matrix"></div>
                     <div class="legend">
                         <div><span class="legend-box" style="background: var(--mint);"></span> Available</div>
@@ -90,30 +152,39 @@
                 <!-- Right: Customer Form & Proceed -->
                 <div class="card-panel">
                     <h3 style="font-size: 14px; color: var(--sage); margin-bottom: 4px;">Selected Seats</h3>
-                    <p id="selected-seats-display" style="font-size: 16px; font-weight: bold; margin-bottom: 18px;">None</p>
+                    <p id="selected-seats-display" style="font-size: 17px; font-weight: bold; margin-bottom: 18px; color: var(--burgundy);">None</p>
                     
                     <div class="form-group">
-                        <label for="cust-name">Customer Name</label>
-                        <input type="text" id="cust-name" placeholder="Enter full name">
+                        <label for="cust-name">Customer Full Name</label>
+                        <input type="text" id="cust-name" placeholder="e.g. Aryan Sharma">
                     </div>
                     <div class="form-group">
-                        <label for="cust-phone">Phone Number (10 digits)</label>
+                        <label for="cust-phone">Mobile Phone (10 digits)</label>
                         <input type="text" id="cust-phone" placeholder="e.g. 9876543210" maxlength="10">
                     </div>
-                    <button class="pill-btn filled" style="width: 100%; margin-top: 12px; padding: 12px;" onclick="UI.proceedToPay()">Proceed to Pay &gt;</button>
+
+                    <div style="background: var(--cream); padding: 12px; border-radius: 10px; margin-top: 14px; font-size: 12px; color: var(--sage); line-height: 1.5;">
+                        <span style="font-weight: bold; color: var(--burgundy);">✨ Lumière Guarantee:</span>
+                        Instant digital boarding pass with entry QR code and WhatsApp SMS receipt confirmation.
+                    </div>
+
+                    <button class="pill-btn filled" style="width: 100%; margin-top: 18px; padding: 14px; font-size: 14px;" onclick="UI.proceedToPay()">Proceed to Pay &gt;</button>
                 </div>
             </div>
         </section>
 
-        <!-- Booking Confirmed Screen -->
+        <!-- Booking Confirmed Screen with Digital Boarding Pass -->
         <section id="screen-confirmed" class="screen">
             <div class="confirm-center">
                 <div class="confirm-card">
                     <div class="tick-badge">&#10003;</div>
-                    <h2 style="font-family: Georgia, serif; font-size: 24px;">Booking Confirmed!</h2>
-                    <p style="color: var(--sage); font-size: 13px; margin: 6px 0 20px;">Your movie tickets are booked successfully</p>
-                    <div id="confirm-details" style="text-align: left; margin-bottom: 24px;"></div>
-                    <div style="display: flex; gap: 10px; justify-content: center;">
+                    <h2 style="font-family: Georgia, serif; font-size: 26px; color: var(--burgundy);">Booking Confirmed!</h2>
+                    <p style="color: var(--sage); font-size: 13px; margin: 6px 0 16px;">Your cinema tickets and e-pass are issued successfully</p>
+                    
+                    <div id="confirm-pass-preview"></div>
+
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                        <button class="pill-btn gold" onclick="UI.printPass()">🖨️ Print Boarding Pass</button>
                         <button class="pill-btn filled" onclick="UI.showScreen('bookings')">View My Bookings</button>
                         <button class="pill-btn outline" onclick="UI.showScreen('home')">Back to Home</button>
                     </div>
@@ -123,7 +194,7 @@
 
         <!-- Bookings Management Table -->
         <section id="screen-bookings" class="screen">
-            <h2 style="font-family: Georgia, serif; font-size: 24px; margin-bottom: 12px;">My Bookings</h2>
+            <h2 style="font-family: Georgia, serif; font-size: 24px; margin-bottom: 12px;">My Bookings & Passports</h2>
             <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px;">
                 <input type="text" id="bookings-search" class="search-input" style="max-width: 320px;" placeholder="Search by ID, name or movie..." oninput="UI.renderBookings()">
                 <button class="pill-btn outline" onclick="document.getElementById('bookings-search').value=''; UI.renderBookings();">Show All</button>
@@ -135,12 +206,12 @@
                     <tr>
                         <th>Booking ID</th>
                         <th>Movie</th>
-                        <th>Show</th>
+                        <th>Show & Cinema</th>
                         <th>Seats</th>
                         <th>Type</th>
                         <th>Customer</th>
                         <th>Total</th>
-                        <th>Action</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="bookings-table-body"></tbody>
@@ -149,16 +220,44 @@
 
         <!-- Summary Analytics Tiles -->
         <section id="screen-summary" class="screen">
-            <h2 style="font-family: Georgia, serif; font-size: 24px;">Summary</h2>
-            <p style="color: var(--sage); font-size: 13px; margin-top: 4px;">Lumière Cinemas - Real-time Overview</p>
+            <h2 style="font-family: Georgia, serif; font-size: 24px;">Theater Analytics & Financial Summary</h2>
+            <p style="color: var(--sage); font-size: 13px; margin-top: 4px;">Lumière Cinemas - Real-time Ledger Overview</p>
             <div class="summary-grid" id="summary-tiles"></div>
         </section>
     </main>
 
+    <!-- Video Trailer Modal -->
+    <div class="modal-overlay" id="trailer-modal" onclick="UI.closeTrailerModal(event)">
+        <div class="modal-card trailer-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="trailer-modal-title" style="color: var(--peach); font-size: 16px; font-weight: 600;">Official Trailer</h3>
+                <button class="close-modal-btn" onclick="UI.closeTrailer()">&times;</button>
+            </div>
+            <div class="video-responsive-wrap">
+                <iframe id="trailer-iframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Digital Boarding Pass Ticket Modal -->
+    <div class="modal-overlay" id="pass-modal" onclick="UI.closePassModal(event)">
+        <div class="modal-card pass-modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 style="font-family: Georgia, serif; font-size: 18px; color: var(--burgundy);">Digital Cinema Pass</h3>
+                <button class="close-modal-btn" onclick="UI.closePassModal()">&times;</button>
+            </div>
+            <div id="modal-pass-body"></div>
+            <div style="display: flex; gap: 10px; margin-top: 16px;">
+                <button class="pill-btn gold" style="flex: 1;" onclick="UI.printPass()">🖨️ Print Pass</button>
+                <button class="pill-btn outline" style="flex: 1;" onclick="UI.closePassModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Bill Modal -->
     <div class="modal-overlay" id="bill-modal">
         <div class="modal-card">
-            <h3 style="font-family: Georgia, serif; font-size: 20px; margin-bottom: 14px;">Bill Receipt</h3>
+            <h3 style="font-family: Georgia, serif; font-size: 20px; margin-bottom: 14px;">Detailed Bill Receipt</h3>
             <div id="modal-bill-content"></div>
             <button class="pill-btn filled" style="width: 100%; margin-top: 18px;" onclick="UI.closeBillModal()">Close</button>
         </div>
@@ -167,3 +266,4 @@
     <script src="app.js"></script>
 </body>
 </html>
+
