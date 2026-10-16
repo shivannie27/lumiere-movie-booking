@@ -65,12 +65,69 @@ public class App {
                     Collections.addAll(booked, t.getSeats());
                 }
             }
+            // Include seats that are currently held
+            for (int r = 0; r < 10; r++) {
+                char row = (char) ('A' + r);
+                for (int c = 1; c <= 12; c++) {
+                    String seatName = "" + row + c;
+                    if (!booked.contains(seatName) && store.isSeatHeld(movie, show, seatName)) {
+                        booked.add(seatName);
+                    }
+                }
+            }
+
             StringBuilder sb = new StringBuilder("[");
             for (int i = 0; i < booked.size(); i++) {
                 sb.append("\"").append(booked.get(i)).append("\"").append(i < booked.size() - 1 ? "," : "");
             }
             sb.append("]");
             sendJson(exchange, 200, sb.toString());
+        });
+
+        server.createContext("/api/hold-seats", exchange -> {
+            if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+                sendJson(exchange, 405, "{\"error\":\"Method not allowed\"}");
+                return;
+            }
+            try {
+                String body = readBody(exchange);
+                Map<String, String> map = parseSimpleJson(body);
+                String movie = map.get("movie");
+                String show = map.get("show");
+                String rawSeats = map.getOrDefault("seats", "");
+                if (rawSeats.startsWith("[")) rawSeats = rawSeats.substring(1);
+                if (rawSeats.endsWith("]")) rawSeats = rawSeats.substring(0, rawSeats.length() - 1);
+                rawSeats = rawSeats.replace("\"", "").replace(" ", "");
+                String[] seats = rawSeats.isEmpty() ? new String[0] : rawSeats.split(",");
+
+                boolean ok = store.holdSeats(movie, show, seats, 300000L); // 5 minutes TTL
+                sendJson(exchange, 200, "{\"success\":" + ok + ",\"expiresIn\":300}");
+            } catch (Exception ex) {
+                sendJson(exchange, 400, "{\"error\":\"" + ex.getMessage().replace("\"", "\\\"") + "\"}");
+            }
+        });
+
+        server.createContext("/api/release-seats", exchange -> {
+            if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+                sendJson(exchange, 405, "{\"error\":\"Method not allowed\"}");
+                return;
+            }
+            try {
+                String body = readBody(exchange);
+                Map<String, String> map = parseSimpleJson(body);
+                String movie = map.get("movie");
+                String show = map.get("show");
+                String rawSeats = map.getOrDefault("seats", "");
+                if (rawSeats.startsWith("[")) rawSeats = rawSeats.substring(1);
+                if (rawSeats.endsWith("]")) rawSeats = rawSeats.substring(0, rawSeats.length() - 1);
+                rawSeats = rawSeats.replace("\"", "").replace(" ", "");
+                String[] seats = rawSeats.isEmpty() ? new String[0] : rawSeats.split(",");
+
+                store.releaseSeats(movie, show, seats);
+                sendJson(exchange, 200, "{\"success\":true}");
+            } catch (Exception ex) {
+                sendJson(exchange, 400, "{\"error\":\"" + ex.getMessage().replace("\"", "\\\"") + "\"}");
+            }
         });
 
         server.createContext("/api/coupon", exchange -> {
@@ -345,9 +402,11 @@ public class App {
             ".info-val.gold{color:var(--gold-lt);font-size:15px;font-weight:bold;}" +
             ".perforation{border-top:1px dashed rgba(254,215,184,0.35);margin:18px 0 16px;}" +
             ".pass-foot{display:flex;justify-content:space-between;align-items:center;}" +
-            ".actions{display:flex;gap:10px;margin-top:20px;}" +
-            ".btn{flex:1;padding:12px;border-radius:999px;font-size:13px;font-weight:bold;cursor:pointer;text-align:center;text-decoration:none;transition:all 0.2s;}" +
-            ".btn-gold{background:linear-gradient(135deg,var(--gold),#B8860B);color:#1E0A0C;border:none;}" +
+            ".actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}" +
+            ".btn{flex:1;min-width:140px;padding:12px;border-radius:999px;font-size:13px;font-weight:bold;cursor:pointer;text-align:center;text-decoration:none;transition:all 0.2s;display:inline-flex;align-items:center;justify-content:center;gap:6px;}" +
+            ".btn-wa{background:#25D366;color:#fff;border:none;box-shadow:0 4px 12px rgba(37,211,102,0.3);}" +
+            ".btn-wa:hover{background:#128C7E;}" +
+            ".btn-gold{background:linear-gradient(135deg,var(--gold),#B8860B);color:#1E0A0C;border:none;box-shadow:0 4px 12px rgba(212,175,55,0.3);}" +
             ".btn-outline{border:1px solid rgba(254,215,184,0.6);color:var(--peach);background:transparent;}" +
             "@media print{body{background:#fff;color:#000;padding:0;}.verified-pill,.actions{display:none;}.pass-card{background:#26070A !important;color:#fff !important;box-shadow:none;}}" +
             "</style></head><body>" +
@@ -371,12 +430,41 @@ public class App {
             "<div class='perforation'></div>" +
             "<div class='pass-foot'>" +
             "<div><div class='info-label'>BOOKING PASSPORT ID</div><div style='font-family:monospace;font-size:16px;font-weight:bold;letter-spacing:2px;color:var(--gold-lt);'>" + ticket.getBookingId() + "</div><div style='font-size:10px;color:rgba(254,215,184,0.6);margin-top:4px;'>Present at cinema turnstile</div></div>" +
-            "<div style='background:#fff;padding:6px;border-radius:8px;'><img src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=2&data=http://localhost:" + port + "/ticket?id=" + ticket.getBookingId() + "' width='64' height='64' alt='QR' style='display:block;'></div>" +
+            "<div style='background:#fff;padding:6px 10px;border-radius:8px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);'>" +
+            "<svg width='110' height='32' viewBox='0 0 110 32' xmlns='http://www.w3.org/2000/svg'>" +
+            "<rect x='2' y='0' width='3' height='24' fill='#1E0A0C'/><rect x='7' y='0' width='1' height='24' fill='#1E0A0C'/><rect x='10' y='0' width='4' height='24' fill='#1E0A0C'/><rect x='16' y='0' width='2' height='24' fill='#1E0A0C'/><rect x='20' y='0' width='3' height='24' fill='#1E0A0C'/><rect x='25' y='0' width='1' height='24' fill='#1E0A0C'/><rect x='28' y='0' width='4' height='24' fill='#1E0A0C'/><rect x='34' y='0' width='2' height='24' fill='#1E0A0C'/><rect x='38' y='0' width='3' height='24' fill='#1E0A0C'/><rect x='43' y='0' width='2' height='24' fill='#1E0A0C'/><rect x='47' y='0' width='4' height='24' fill='#1E0A0C'/><rect x='53' y='0' width='1' height='24' fill='#1E0A0C'/><rect x='56' y='0' width='3' height='24' fill='#1E0A0C'/><rect x='61' y='0' width='2' height='24' fill='#1E0A0C'/><rect x='65' y='0' width='4' height='24' fill='#1E0A0C'/><rect x='71' y='0' width='1' height='24' fill='#1E0A0C'/><rect x='74' y='0' width='3' height='24' fill='#1E0A0C'/><rect x='79' y='0' width='2' height='24' fill='#1E0A0C'/><rect x='83' y='0' width='4' height='24' fill='#1E0A0C'/><rect x='89' y='0' width='1' height='24' fill='#1E0A0C'/><rect x='92' y='0' width='3' height='24' fill='#1E0A0C'/><rect x='97' y='0' width='2' height='24' fill='#1E0A0C'/><rect x='101' y='0' width='4' height='24' fill='#1E0A0C'/>" +
+            "<text x='55' y='30' font-family='monospace' font-size='6' text-anchor='middle' fill='#1E0A0C'>" + ticket.getBookingId() + "</text>" +
+            "</svg></div>" +
             "</div></div>" +
             "<div class='actions'>" +
-            "<button class='btn btn-gold' onclick='window.print()'>🖨️ Print Pass</button>" +
-            "<a class='btn btn-outline' href='/'>&larr; Main App</a>" +
+            "<a class='btn btn-wa' href='https://api.whatsapp.com/send?text=" + urlEncode(
+                "🎬 *LUMIÈRE CINEMAS — OFFICIAL E-PASS* 🎟️\n" +
+                "━━━━━━━━━━━━━━━━━━━━\n" +
+                "✨ *Movie:* " + ticket.getMovie().getTitle() + " [" + ticket.getMovie().getCertification() + "]\n" +
+                "🏛️ *Cinema:* " + ticket.getShowTime() + "\n" +
+                "💺 *Reserved Seats:* " + seats + " (" + ticket.getType() + " Recliner)\n" +
+                "👤 *Guest Name:* " + ticket.getCustomer().getName() + "\n" +
+                "📱 *Phone:* " + ticket.getCustomer().getPhone() + "\n" +
+                "🔖 *Booking Passport ID:* " + ticket.getBookingId() + "\n" +
+                "🍿 *Concessions:* " + snacks + "\n" +
+                "💰 *Total Amount Paid:* Rs. " + String.format(java.util.Locale.US, "%.2f", ticket.calculateBill()) + "\n" +
+                "━━━━━━━━━━━━━━━━━━━━\n" +
+                "✅ *Turnstile Status:* ENTRY CLEARED\n" +
+                "🌐 *Digital E-Pass:* http://" + findBestHostIp() + ":" + port + "/ticket?id=" + ticket.getBookingId() + "\n" +
+                "━━━━━━━━━━━━━━━━━━━━\n" +
+                "_Please arrive 15 mins prior at the turnstile._"
+            ) + "' target='_blank'>📲 Share on WhatsApp</a>" +
+            "<button class='btn btn-gold' onclick='window.print()'>📥 Save as PDF / Print</button>" +
+            "<a class='btn btn-outline' href='/'>&larr; Book More</a>" +
             "</div></div></body></html>";
+    }
+
+    private static String urlEncode(String text) {
+        try {
+            return java.net.URLEncoder.encode(text, StandardCharsets.UTF_8.toString());
+        } catch (Exception e) {
+            return text;
+        }
     }
 
     public static String findBestHostIp() {

@@ -687,20 +687,118 @@ header {
 .stat-val { font-family: Georgia, serif; font-size: 30px; font-weight: bold; color: var(--burgundy); }
 .stat-name { font-size: 13px; color: var(--sage); margin-top: 4px; font-weight: 500; }
 
-/* Print Media Query */
+/* 5-Minute Seat Hold Countdown Banner */
+.seat-hold-banner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(74, 14, 23, 0.08), rgba(212, 175, 55, 0.18));
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    padding: 9px 18px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--burgundy);
+    box-shadow: 0 4px 12px rgba(74, 14, 23, 0.08);
+    transition: all 0.3s ease;
+}
+.seat-hold-banner.warning {
+    background: linear-gradient(135deg, rgba(163, 43, 43, 0.15), rgba(255, 107, 107, 0.22));
+    border-color: #a32b2b;
+    color: #a32b2b;
+    animation: timerPulse 1.2s infinite;
+}
+@keyframes timerPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(163, 43, 43, 0.4); }
+    50% { transform: scale(1.02); box-shadow: 0 0 14px rgba(163, 43, 43, 0.4); }
+}
+.timer-digits {
+    font-family: monospace;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    font-weight: bold;
+}
+
+/* Genuine WhatsApp Share Button */
+.btn-whatsapp {
+    background: #25D366 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    font-weight: 700 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35) !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer;
+}
+.btn-whatsapp:hover {
+    background: #128C7E !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(37, 211, 102, 0.45) !important;
+}
+
+/* Luxury PDF Download Button */
+.btn-pdf {
+    background: linear-gradient(135deg, #B8860B, var(--gold)) !important;
+    color: #1E0A0C !important;
+    border: none !important;
+    font-weight: 700 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.35) !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer;
+}
+.btn-pdf:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+/* Turnstile Barcode Wrap */
+.pass-barcode-box {
+    background: #FFFFFF;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.pass-barcode-box svg {
+    display: block;
+}
+
+/* Print Media Query for PDF / Printing */
+@page {
+    size: auto;
+    margin: 15mm;
+}
 @media print {
     body * { visibility: hidden; }
-    #ticket-boarding-pass, #ticket-boarding-pass * { visibility: visible; }
-    #ticket-boarding-pass {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        box-shadow: none;
+    .ticket-boarding-pass, .ticket-boarding-pass * { visibility: visible; }
+    .ticket-boarding-pass {
+        position: absolute !important;
+        left: 50% !important;
+        top: 20px !important;
+        transform: translateX(-50%) !important;
+        width: 100% !important;
+        max-width: 440px !important;
+        margin: 0 auto !important;
+        box-shadow: none !important;
         background: #26070A !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        border: 1px solid #D4AF37 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .modal-overlay, .modal-card, .ticket-action-bar, .actions {
+        display: none !important;
     }
 }
 

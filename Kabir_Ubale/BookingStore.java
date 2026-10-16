@@ -129,6 +129,9 @@ public class BookingStore {
         return null;
     }
 
+    // Temporary 5-minute Seat Hold Registry with TTL (Concurrency Control)
+    private final Map<String, Long> heldSeats = new HashMap<>();
+
     /** Seat reservation engine with collision detection */
     public synchronized void add(Ticket ticket) {
         if (ticket == null) throw new IllegalArgumentException("Booking cannot be null.");
@@ -137,7 +140,46 @@ public class BookingStore {
                 throw new IllegalStateException("Seat " + seat + " is already booked for this show.");
             }
         }
+        // Remove temporary holds once confirmed
+        for (String seat : ticket.getSeats()) {
+            heldSeats.remove(ticket.getMovie().getTitle() + "|" + ticket.getShowTime() + "|" + seat.toUpperCase());
+        }
         bookings.add(ticket);
+    }
+
+    /** Place temporary hold on seats for 5 minutes (TTL concurrency) */
+    public synchronized boolean holdSeats(String movieTitle, String showTime, String[] seats, long durationMs) {
+        long now = System.currentTimeMillis();
+        heldSeats.entrySet().removeIf(e -> e.getValue() < now);
+
+        for (String seat : seats) {
+            String s = seat.toUpperCase();
+            if (isSeatBooked(movieTitle, showTime, s)) return false;
+            String key = movieTitle + "|" + showTime + "|" + s;
+            Long exp = heldSeats.get(key);
+            if (exp != null && exp > now) return false;
+        }
+
+        long expiryTime = now + durationMs;
+        for (String seat : seats) {
+            heldSeats.put(movieTitle + "|" + showTime + "|" + seat.toUpperCase(), expiryTime);
+        }
+        return true;
+    }
+
+    /** Release held seats when user cancels or selection changes */
+    public synchronized void releaseSeats(String movieTitle, String showTime, String[] seats) {
+        for (String seat : seats) {
+            heldSeats.remove(movieTitle + "|" + showTime + "|" + seat.toUpperCase());
+        }
+    }
+
+    /** Check if a seat is currently held */
+    public synchronized boolean isSeatHeld(String movieTitle, String showTime, String seat) {
+        long now = System.currentTimeMillis();
+        String key = movieTitle + "|" + showTime + "|" + seat.toUpperCase();
+        Long exp = heldSeats.get(key);
+        return exp != null && exp > now;
     }
 
     /** Check if a specific seat is already occupied */

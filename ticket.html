@@ -173,10 +173,23 @@
             text-decoration: none;
             transition: all 0.2s;
         }
+        .btn-wa {
+            background: #25D366;
+            color: #FFFFFF;
+            border: none;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+        }
+        .btn-wa:hover {
+            background: #128C7E;
+        }
         .btn-gold {
             background: linear-gradient(135deg, var(--gold), #B8860B);
             color: #1E0A0C;
             border: none;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+        .btn-gold:hover {
+            filter: brightness(1.1);
         }
         .btn-outline {
             border: 1px solid rgba(254, 215, 184, 0.6);
@@ -239,14 +252,18 @@
                     <div style="font-family: monospace; font-size: 17px; font-weight: bold; letter-spacing: 2px; color: var(--gold-lt);" id="pass-id">LUM100001</div>
                     <div style="font-size: 10px; color: rgba(254,215,184,0.6); margin-top: 4px;">Gate opens 15 mins prior</div>
                 </div>
-                <div class="qr-box">
-                    <img id="pass-qr" src="" width="64" height="64" alt="QR" style="display: block;">
+                <div style="background: #fff; padding: 6px 10px; border-radius: 8px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                    <svg width="110" height="32" viewBox="0 0 110 32" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="0" width="3" height="24" fill="#1E0A0C"/><rect x="7" y="0" width="1" height="24" fill="#1E0A0C"/><rect x="10" y="0" width="4" height="24" fill="#1E0A0C"/><rect x="16" y="0" width="2" height="24" fill="#1E0A0C"/><rect x="20" y="0" width="3" height="24" fill="#1E0A0C"/><rect x="25" y="0" width="1" height="24" fill="#1E0A0C"/><rect x="28" y="0" width="4" height="24" fill="#1E0A0C"/><rect x="34" y="0" width="2" height="24" fill="#1E0A0C"/><rect x="38" y="0" width="3" height="24" fill="#1E0A0C"/><rect x="43" y="0" width="2" height="24" fill="#1E0A0C"/><rect x="47" y="0" width="4" height="24" fill="#1E0A0C"/><rect x="53" y="0" width="1" height="24" fill="#1E0A0C"/><rect x="56" y="0" width="3" height="24" fill="#1E0A0C"/><rect x="61" y="0" width="2" height="24" fill="#1E0A0C"/><rect x="65" y="0" width="4" height="24" fill="#1E0A0C"/><rect x="71" y="0" width="1" height="24" fill="#1E0A0C"/><rect x="74" y="0" width="3" height="24" fill="#1E0A0C"/><rect x="79" y="0" width="2" height="24" fill="#1E0A0C"/><rect x="83" y="0" width="4" height="24" fill="#1E0A0C"/><rect x="89" y="0" width="1" height="24" fill="#1E0A0C"/><rect x="92" y="0" width="3" height="24" fill="#1E0A0C"/><rect x="97" y="0" width="2" height="24" fill="#1E0A0C"/><rect x="101" y="0" width="4" height="24" fill="#1E0A0C"/>
+                        <text x="55" y="30" font-family="monospace" font-size="6" text-anchor="middle" fill="#1E0A0C" id="barcode-id-text">LUM100001</text>
+                    </svg>
                 </div>
             </div>
         </div>
 
         <div class="actions">
-            <button class="btn btn-gold" onclick="window.print()">🖨️ Print Ticket</button>
+            <button class="btn btn-wa" id="btn-share-wa">📲 Share on WhatsApp</button>
+            <button class="btn btn-gold" onclick="window.print()">📥 Save as PDF / Print</button>
             <a class="btn btn-outline" href="/">Book More Tickets</a>
         </div>
     </div>
@@ -265,6 +282,7 @@
             const snacks = p.get("sn") || p.get("snacks") || "None";
 
             document.getElementById("pass-id").innerText = id;
+            document.getElementById("barcode-id-text").textContent = id;
             document.getElementById("pass-movie").innerText = movie;
             document.getElementById("pass-seats").innerText = seats;
             document.getElementById("pass-show").innerText = show;
@@ -274,8 +292,27 @@
             document.getElementById("pass-tier").innerText = type.toUpperCase() + " RECLINER";
             document.getElementById("pass-snacks").innerText = snacks;
 
-            const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=2&data=" + encodeURIComponent(window.location.href);
-            document.getElementById("pass-qr").src = qrUrl;
+            const msg = 
+`🎬 *LUMIÈRE CINEMAS — OFFICIAL E-PASS* 🎟️
+━━━━━━━━━━━━━━━━━━━━
+✨ *Movie:* ${movie}
+🏛️ *Cinema:* ${show}
+💺 *Reserved Seats:* ${seats} (${type} Recliner)
+👤 *Guest Name:* ${name}
+📱 *Phone:* ${phone}
+🔖 *Booking Passport ID:* ${id}
+🍿 *Concessions:* ${snacks}
+💰 *Total Amount Paid:* Rs. ${parseFloat(total).toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━
+✅ *Turnstile Status:* ENTRY CLEARED
+🌐 *Open Official Digital Pass:*
+${window.location.href}
+━━━━━━━━━━━━━━━━━━━━
+_Please arrive 15 minutes before showtime._`;
+
+            document.getElementById("btn-share-wa").onclick = function() {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+            };
         })();
     </script>
 </body>

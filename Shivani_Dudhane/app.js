@@ -55,6 +55,9 @@ const UI = {
     },
 
     showScreen(screenId) {
+        if (screenId !== "booking" && screenId !== "confirmed") {
+            this.stopSeatTimer();
+        }
         document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
         document.querySelectorAll(".nav-pills .pill-btn").forEach(b => b.classList.remove("active"));
         const screen = document.getElementById(`screen-${screenId}`);
@@ -240,6 +243,7 @@ const UI = {
 
     // ---------- Interactive Seat Selection & Concessions ----------
     async startBooking(time) {
+        this.stopSeatTimer();
         this.currentShowTime = `${this.currentCinema} (${this.currentCity}) | ${time}`;
         this.selectedSeats = [];
         this.isPremium = false;
@@ -341,6 +345,97 @@ const UI = {
         }
         this.renderSeats();
         this.updateBill();
+
+        if (this.selectedSeats.length > 0) {
+            this.startSeatTimer();
+        } else {
+            this.stopSeatTimer();
+        }
+    },
+
+    // ---------- 5-Minute Seat Hold Concurrency Timer ----------
+    seatTimer: null,
+    seatSecondsLeft: 300,
+
+    startSeatTimer() {
+        if (this.seatTimer) return;
+        this.seatSecondsLeft = 300;
+        this.updateSeatTimerDisplay();
+        const banner = document.getElementById("seat-timer-banner");
+        if (banner) banner.style.display = "flex";
+
+        this.seatTimer = setInterval(() => {
+            this.seatSecondsLeft--;
+            this.updateSeatTimerDisplay();
+
+            if (this.seatSecondsLeft <= 0) {
+                this.expireSeatReservation();
+            }
+        }, 1000);
+
+        this.syncBackendHold();
+    },
+
+    stopSeatTimer() {
+        if (this.seatTimer) {
+            clearInterval(this.seatTimer);
+            this.seatTimer = null;
+        }
+        const banner = document.getElementById("seat-timer-banner");
+        if (banner) {
+            banner.style.display = "none";
+            banner.classList.remove("warning");
+        }
+    },
+
+    updateSeatTimerDisplay() {
+        const display = document.getElementById("seat-timer-display");
+        const banner = document.getElementById("seat-timer-banner");
+        if (!display) return;
+        const mins = Math.floor(this.seatSecondsLeft / 60);
+        const secs = this.seatSecondsLeft % 60;
+        display.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+        if (this.seatSecondsLeft <= 60) {
+            if (banner) banner.classList.add("warning");
+        } else {
+            if (banner) banner.classList.remove("warning");
+        }
+    },
+
+    expireSeatReservation() {
+        this.stopSeatTimer();
+        const expired = [...this.selectedSeats];
+        this.selectedSeats = [];
+        this.renderSeats();
+        this.updateBill();
+        if (this.currentMovie && expired.length > 0) {
+            fetch("/api/release-seats", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    movie: this.currentMovie.title,
+                    show: this.currentShowTime,
+                    seats: expired
+                })
+            }).catch(() => {});
+        }
+        alert("⏳ Your 5-minute seat reservation has expired! Selected seats have been released. Please re-select your seats to proceed.");
+    },
+
+    async syncBackendHold() {
+        if (!this.currentMovie || this.selectedSeats.length === 0) return;
+        try {
+            await fetch("/api/hold-seats", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    movie: this.currentMovie.title,
+                    show: this.currentShowTime,
+                    seats: this.selectedSeats
+                })
+            });
+        } catch (e) {}
     },
 
     // ---------- Concessions & Promo Codes ----------
@@ -513,6 +608,7 @@ const UI = {
             if (data.error) throw new Error(data.error);
 
             this.lastConfirmedTicket = data;
+            this.stopSeatTimer();
             this.playConfirmationChime();
             this.showConfirmation(data);
         } catch (err) {
@@ -520,86 +616,77 @@ const UI = {
         }
     },
 
-    generateQrSvg(text) {
-        // Deterministic Luxury SVG QR Code matrix based on booking ID
-        let hash = 0;
-        for (let i = 0; i < text.length; i++) {
-            hash = ((hash << 5) - hash) + text.charCodeAt(i);
-            hash |= 0;
-        }
-        
-        const size = 17;
-        const rects = [];
-        
-        // Standard corner detection squares (top-left, top-right, bottom-left)
-        const addCorner = (r0, c0) => {
-            for (let r = 0; r < 5; r++) {
-                for (let c = 0; c < 5; c++) {
-                    if (r === 0 || r === 4 || c === 0 || c === 4 || (r >= 1 && r <= 3 && c >= 1 && c <= 3 && (r === 2 || c === 2))) {
-                        rects.push(`<rect x="${c0 + c}" y="${r0 + r}" width="1" height="1" fill="#3A0E12" />`);
-                    }
-                }
+    generateBarcodeSvg(code) {
+        // High-contrast clean luxury theater barcode
+        const bars = [];
+        const pattern = [3, 1, 4, 2, 3, 1, 4, 2, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4, 1, 3, 2, 4];
+        let x = 2;
+        for (let i = 0; i < pattern.length; i++) {
+            const w = pattern[i];
+            if (i % 2 === 0) {
+                bars.push(`<rect x="${x}" y="0" width="${w}" height="24" fill="#1E0A0C" />`);
             }
-        };
-        addCorner(1, 1);
-        addCorner(1, 11);
-        addCorner(11, 1);
-
-        // Deterministic data cells
-        for (let r = 1; r < size - 1; r++) {
-            for (let c = 1; c < size - 1; c++) {
-                if ((r < 7 && c < 7) || (r < 7 && c > 9) || (r > 9 && c < 7)) continue;
-                const bit = Math.abs((hash ^ (r * 31 + c * 17)) % 7) > 3;
-                if (bit) {
-                    rects.push(`<rect x="${c}" y="${r}" width="1" height="1" fill="#3A0E12" />`);
-                }
-            }
+            x += w + 1;
         }
-
-        return `<svg viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
-            <rect width="${size}" height="${size}" fill="#FFFFFF"/>
-            ${rects.join("")}
+        return `<svg width="110" height="32" viewBox="0 0 ${x + 2} 32" xmlns="http://www.w3.org/2000/svg">
+            ${bars.join("")}
+            <text x="${(x + 2) / 2}" y="30" font-family="monospace" font-size="7" font-weight="bold" text-anchor="middle" fill="#1E0A0C">${code}</text>
         </svg>`;
     },
 
-    qrMode: 'web',
-
-    toggleQrMode(ticketId) {
-        this.qrMode = this.qrMode === 'web' ? 'camera' : 'web';
-        const t = (this.bookings && this.bookings.find(b => b.id === ticketId)) || this.lastConfirmedTicket;
-        if (t) {
-            const preview = document.getElementById("confirm-pass-preview");
-            if (preview && preview.innerHTML) preview.innerHTML = this.buildBoardingPassHtml(t);
-            const modalBody = document.getElementById("modal-pass-body");
-            if (modalBody && modalBody.innerHTML) modalBody.innerHTML = this.buildBoardingPassHtml(t);
-        }
-    },
-
-    buildBoardingPassHtml(ticket) {
+    shareOnWhatsApp(ticketId) {
+        const t = (ticketId && this.bookings && this.bookings.find(b => b.id === ticketId)) || this.lastConfirmedTicket;
+        if (!t) return;
         const host = (this.serverInfo && this.serverInfo.host && !this.serverInfo.host.startsWith("127.")) 
             ? this.serverInfo.host 
             : window.location.hostname;
         const port = (this.serverInfo && this.serverInfo.port) ? this.serverInfo.port : (window.location.port || 8080);
-        const ticketUrl = `http://${host}:${port}/ticket?id=${ticket.id}`;
+        const ticketUrl = `http://${host}:${port}/ticket?id=${t.id}`;
+        const snacksVal = t.snacks && parseFloat(t.snacks) > 0 ? `Rs. ${parseFloat(t.snacks).toFixed(2)}` : "None";
+        const seatsVal = Array.isArray(t.seats) ? t.seats.join(", ") : t.seats;
 
-        const cameraTextPass = `🎟️ LUMIÈRE CINEMAS - E-TICKET\n` +
-            `--------------------------------\n` +
-            `Movie: ${ticket.movie.title} [${ticket.movie.certification || 'UA'}]\n` +
-            `Cinema: ${ticket.showTime}\n` +
-            `Seats: ${ticket.seats.join(", ")} (${ticket.type} Recliner)\n` +
-            `Guest: ${ticket.customer.name} (${ticket.customer.phone})\n` +
-            `Booking ID: ${ticket.id}\n` +
-            `Total Paid: Rs. ${parseFloat(ticket.total).toFixed(2)}\n` +
-            `Turnstile: ENTRY CLEARED ✅\n` +
-            `--------------------------------\n` +
-            `Gate opens 15 mins prior`;
+        const msg = 
+`🎬 *LUMIÈRE CINEMAS — OFFICIAL E-PASS* 🎟️
+━━━━━━━━━━━━━━━━━━━━
+✨ *Movie:* ${t.movie.title} [${t.movie.certification || 'UA'}]
+🏛️ *Cinema & Screen:* ${t.showTime}
+💺 *Reserved Seats:* ${seatsVal} (${t.type} Recliner)
+👤 *Guest Name:* ${t.customer.name}
+📱 *Phone:* ${t.customer.phone}
+🔖 *Booking Passport ID:* ${t.id}
+🍿 *Concessions:* ${snacksVal}
+💰 *Total Amount Paid:* Rs. ${parseFloat(t.total).toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━
+✅ *Turnstile Status:* ENTRY CLEARED
+🌐 *Open Official Digital Pass:*
+${ticketUrl}
+━━━━━━━━━━━━━━━━━━━━
+_Please arrive 15 minutes before showtime._`;
 
-        const isCameraMode = (this.qrMode || 'camera') === 'camera';
-        const qrContent = isCameraMode ? cameraTextPass : ticketUrl;
-        const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=2&data=${encodeURIComponent(qrContent)}`;
-        const fallbackSvg = this.generateQrSvg(ticket.id);
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    },
+
+    currentModalTicketId: null,
+
+    shareCurrentModalPassOnWhatsApp() {
+        if (this.currentModalTicketId) {
+            this.shareOnWhatsApp(this.currentModalTicketId);
+        } else if (this.lastConfirmedTicket) {
+            this.shareOnWhatsApp(this.lastConfirmedTicket.id);
+        }
+    },
+
+    downloadPdf(ticketId) {
+        const t = (ticketId && this.bookings && this.bookings.find(b => b.id === ticketId)) || this.lastConfirmedTicket;
+        const origTitle = document.title;
+        document.title = `Lumiere_Pass_${t ? t.id : 'Official'}`;
+        window.print();
+        setTimeout(() => { document.title = origTitle; }, 1200);
+    },
+
+    buildBoardingPassHtml(ticket) {
         const snacksVal = ticket.snacks && parseFloat(ticket.snacks) > 0 ? `Rs. ${parseFloat(ticket.snacks).toFixed(2)}` : "None";
-        const discountVal = ticket.discount && parseFloat(ticket.discount) > 0 ? `-Rs. ${parseFloat(ticket.discount).toFixed(2)}` : "Standard";
+        const seatsVal = Array.isArray(ticket.seats) ? ticket.seats.join(", ") : ticket.seats;
 
         return `
             <div class="ticket-boarding-pass" id="ticket-boarding-pass">
@@ -618,7 +705,7 @@ const UI = {
                     </div>
                     <div>
                         <div class="pass-label">Reserved Seats</div>
-                        <div class="pass-val" style="color: var(--gold-light); font-size: 15px;">${ticket.seats.join(", ")}</div>
+                        <div class="pass-val" style="color: var(--gold-light); font-size: 15px;">${seatsVal}</div>
                     </div>
                     <div>
                         <div class="pass-label">Guest Name</div>
@@ -645,20 +732,15 @@ const UI = {
                         <div style="font-size: 10px; color: var(--peach); letter-spacing: 1px;">BOOKING PASSPORT ID</div>
                         <div style="font-family: monospace; font-size: 16px; font-weight: bold; letter-spacing: 2px;">${ticket.id}</div>
                         <div style="font-size: 10px; color: rgba(254,215,184,0.7); margin-top: 4px;">Gate opens 15 mins before showtime</div>
-                        <div style="margin-top: 8px;">
-                            <button type="button" class="pill-btn outline" style="padding: 3px 10px; font-size: 10px; color: var(--peach); border-color: rgba(254,215,184,0.5); background: transparent;" onclick="UI.toggleQrMode('${ticket.id}')">
-                                Mode: ${isCameraMode ? '📱 Camera Pass' : '🌐 Web URL'} (Toggle)
-                            </button>
+                        <div style="margin-top: 6px;">
+                            <span style="display: inline-block; background: rgba(76,175,80,0.25); border: 1px solid #4CAF50; color: #81C784; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 999px;">
+                                ✅ TURNSTILE ENTRY CLEARED
+                            </span>
                         </div>
                     </div>
-                    <a href="${ticketUrl}" target="_blank" title="Scan with Phone Camera or Click to Open Live Ticket" style="display: flex; flex-direction: column; align-items: center; text-decoration: none;">
-                        <div class="pass-qr-wrap" style="cursor: pointer;">
-                            <img src="${qrImgSrc}" alt="QR" width="68" height="68" style="display: block; border-radius: 4px;" onerror="this.onerror=null; this.parentElement.innerHTML=\`${fallbackSvg.replace(/`/g, "\\`")}\`;">
-                        </div>
-                        <span style="font-size: 9px; color: var(--peach); margin-top: 4px; font-weight: 600; text-decoration: underline;">
-                            ${isCameraMode ? '📱 Camera Scan' : '🌐 Web Link'}
-                        </span>
-                    </a>
+                    <div class="pass-barcode-box" title="Cinema Turnstile Barcode">
+                        ${this.generateBarcodeSvg(ticket.id)}
+                    </div>
                 </div>
             </div>
         `;
@@ -676,6 +758,7 @@ const UI = {
     async openPassModal(id) {
         const ticket = id ? this.bookings.find(b => b.id === id) : this.lastConfirmedTicket;
         if (!ticket) return;
+        this.currentModalTicketId = ticket.id;
         try {
             const sRes = await fetch("/api/server-info");
             this.serverInfo = await sRes.json();
@@ -691,7 +774,7 @@ const UI = {
     },
 
     printPass() {
-        window.print();
+        this.downloadPdf();
     },
 
     // ---------- Bookings & Receipts ----------
@@ -733,6 +816,7 @@ const UI = {
                 <td>
                     <div style="display: flex; gap: 4px;">
                         <button class="pill-btn gold" style="padding: 4px 8px; font-size: 11px;" onclick="UI.openPassModal('${t.id}')">Pass</button>
+                        <button class="pill-btn btn-whatsapp" style="padding: 4px 8px; font-size: 11px;" onclick="UI.shareOnWhatsApp('${t.id}')" title="Share via WhatsApp">📲 WA</button>
                         <button class="pill-btn outline" style="padding: 4px 8px; font-size: 11px;" onclick="UI.viewBill('${t.id}')">Bill</button>
                         <button class="pill-btn outline" style="padding: 4px 8px; font-size: 11px; color: #a32b2b; border-color: #a32b2b;" onclick="UI.cancelBooking('${t.id}')">Cancel</button>
                     </div>
