@@ -56,8 +56,8 @@ public class Ticket {
 
     public static double getTierSurcharge(String seat) {
         String tier = getSeatTier(seat);
-        if ("VIP Recliner".equals(tier)) return 120.0;
-        if ("Executive".equals(tier)) return 60.0;
+        if ("VIP Recliner".equals(tier)) return 350.0;
+        if ("Executive".equals(tier)) return 150.0;
         return 0.0;
     }
 

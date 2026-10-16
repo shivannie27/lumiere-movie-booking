@@ -20,11 +20,11 @@ const UI = {
 
     // Concessions & Promo Code State
     concessions: [
-        { id: "popcorn", name: "Jumbo Caramel Popcorn", price: 280, icon: "🍿", desc: "Buttery crisp gourmet popcorn" },
-        { id: "nachos", name: "Cheese Jalapeño Nachos", price: 220, icon: "🧀", desc: "Warm tortilla chips with hot melted cheese" },
-        { id: "coke", name: "Chilled Coca-Cola (500ml)", price: 140, icon: "🥤", desc: "Refreshing icy fountain beverage" },
-        { id: "coffee", name: "Artisanal Cappuccino", price: 160, icon: "☕", desc: "Fresh espresso with creamy steamed milk" },
-        { id: "hotdog", name: "Gourmet Theater Hot Dog", price: 190, icon: "🌭", desc: "Toasted brioche bun with smoked frank" }
+        { id: "popcorn", name: "Jumbo Caramel Popcorn", price: 380, icon: "🍿", desc: "Buttery crisp gourmet caramel popcorn" },
+        { id: "nachos", name: "Cheese Jalapeño Nachos", price: 320, icon: "🧀", desc: "Warm tortilla chips with hot melted cheese" },
+        { id: "coke", name: "Chilled Coca-Cola (500ml)", price: 180, icon: "🥤", desc: "Refreshing icy fountain beverage" },
+        { id: "coffee", name: "Artisanal Cappuccino", price: 220, icon: "☕", desc: "Fresh espresso with creamy steamed milk" },
+        { id: "hotdog", name: "Gourmet Theater Hot Dog", price: 260, icon: "🌭", desc: "Toasted brioche bun with smoked frank" }
     ],
     snackCart: { popcorn: 0, nachos: 0, coke: 0, coffee: 0, hotdog: 0 },
     appliedCoupon: null,
@@ -275,22 +275,22 @@ const UI = {
     getSeatTierInfo(seatName) {
         if (!seatName) return { id: 'club', name: 'Club Classic', surcharge: 0, badge: '🎬 Club' };
         const row = seatName.charAt(0).toUpperCase();
-        if (row >= 'I') return { id: 'vip', name: 'VIP Recliner', surcharge: 120, badge: '👑 VIP' };
-        if (row >= 'E') return { id: 'exec', name: 'Executive', surcharge: 60, badge: '⭐ Exec' };
+        if (row >= 'I') return { id: 'vip', name: 'VIP Recliner', surcharge: 350, badge: '👑 VIP' };
+        if (row >= 'E') return { id: 'exec', name: 'Executive', surcharge: 150, badge: '⭐ Exec' };
         return { id: 'club', name: 'Club Classic', surcharge: 0, badge: '🎬 Club' };
     },
 
     renderSeats() {
         const matrix = document.getElementById("seat-matrix");
         const rows = 10, cols = 12;
-        const base = this.currentMovie ? this.currentMovie.price : 200;
+        const base = this.currentMovie ? this.currentMovie.price : 350;
 
         // Update Left Panel Tier Pricing Cards
         const vipEl = document.getElementById("tier-price-vip");
         const execEl = document.getElementById("tier-price-exec");
         const clubEl = document.getElementById("tier-price-club");
-        if (vipEl) vipEl.innerText = `Rs. ${(base + 120).toFixed(2)}`;
-        if (execEl) execEl.innerText = `Rs. ${(base + 60).toFixed(2)}`;
+        if (vipEl) vipEl.innerText = `Rs. ${(base + 350).toFixed(2)}`;
+        if (execEl) execEl.innerText = `Rs. ${(base + 150).toFixed(2)}`;
         if (clubEl) clubEl.innerText = `Rs. ${base.toFixed(2)}`;
 
         let html = "";
@@ -302,9 +302,9 @@ const UI = {
             if (rowLetter === 'A') {
                 html += `<div class="seat-tier-divider"><span class="tier-divider-tag tag-club">🎬 Club Classic &bull; Rs. ${base.toFixed(2)}</span></div>`;
             } else if (rowLetter === 'E') {
-                html += `<div class="seat-tier-divider"><span class="tier-divider-tag tag-exec">⭐ Executive (Dolby Atmos) &bull; Rs. ${(base + 60).toFixed(2)}</span></div>`;
+                html += `<div class="seat-tier-divider"><span class="tier-divider-tag tag-exec">⭐ Executive (Dolby Atmos) &bull; Rs. ${(base + 150).toFixed(2)}</span></div>`;
             } else if (rowLetter === 'I') {
-                html += `<div class="seat-tier-divider"><span class="tier-divider-tag tag-vip">👑 VIP Royal Recliner &bull; Rs. ${(base + 120).toFixed(2)}</span></div>`;
+                html += `<div class="seat-tier-divider"><span class="tier-divider-tag tag-vip">👑 VIP Royal Recliner &bull; Rs. ${(base + 350).toFixed(2)}</span></div>`;
             }
 
             html += `<div class="seat-row"><span class="row-label">${rowLetter}</span>`;
@@ -557,7 +557,7 @@ const UI = {
 
     // ---------- Price Calculations & Form Handling ----------
     updateBill() {
-        const movieBase = this.currentMovie ? this.currentMovie.price : 200;
+        const movieBase = this.currentMovie ? this.currentMovie.price : 350;
         let base = 0;
         let hasVip = false;
         this.selectedSeats.forEach(s => {
@@ -620,8 +620,11 @@ const UI = {
             return;
         }
 
-        const unit = this.currentMovie.price + (this.isPremium ? 100 : 0);
-        const base = this.selectedSeats.length * unit;
+        let base = 0;
+        this.selectedSeats.forEach(s => {
+            const t = this.getSeatTierInfo(s);
+            base += (this.currentMovie ? this.currentMovie.price : 350) + t.surcharge;
+        });
         const discountAmount = Math.min(base, this.appliedDiscount);
 
         try {

@@ -4,7 +4,7 @@
 // =====================================================================
 
 public class PremiumTicket extends Ticket {
-    public static final double RECLINER_FEE = 120.0;
+    public static final double RECLINER_FEE = 350.0;
 
     public PremiumTicket(String bookingId, Movie movie, Customer customer, String showTime, String[] seats) {
         super(bookingId, movie, customer, showTime, seats);

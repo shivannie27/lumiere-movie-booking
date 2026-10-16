@@ -17,56 +17,56 @@ public class BookingStore {
     public BookingStore() {
         // Initialize detailed movie catalog with trailers, synopsis & cast
         movies.add(new Movie(
-            "Dune: Part Two", "English", "Sci-Fi / Adventure", 166, 180, 8.8,
+            "Dune: Part Two", "English", "Sci-Fi / Adventure", 166, 350, 8.8,
             "posters/dune2.jpg", "UA 16+",
             "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.",
             "Timothée Chalamet, Zendaya, Rebecca Ferguson, Javier Bardem",
             "Way9Dexny3w"
         ));
         movies.add(new Movie(
-            "Deadpool & Wolverine", "English", "Action / Comedy", 128, 200, 8.2,
+            "Deadpool & Wolverine", "English", "Action / Comedy", 128, 380, 8.2,
             "posters/deadpool.jpg", "A 18+",
             "Wolverine is recovering from his injuries when he crosses paths with the loudmouth Deadpool. They team up to defeat a common enemy.",
             "Ryan Reynolds, Hugh Jackman, Emma Corrin, Matthew Macfadyen",
             "73_1biulkYk"
         ));
         movies.add(new Movie(
-            "Inside Out 2", "English", "Animation / Family", 96, 150, 8.4,
+            "Inside Out 2", "English", "Animation / Family", 96, 300, 8.4,
             "posters/insideout2.jpg", "U",
             "Joy, Sadness, Anger, Fear and Disgust are back as Riley enters puberty, welcoming brand new emotions including Anxiety and Envy.",
             "Amy Poehler, Maya Hawke, Kensington Tallman, Liza Lapira",
             "LEjhY15eCx0"
         ));
         movies.add(new Movie(
-            "Oppenheimer", "English", "Biography / Drama", 180, 220, 8.6,
+            "Oppenheimer", "English", "Biography / Drama", 180, 400, 8.6,
             "posters/oppenheimer.jpg", "UA 16+",
             "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II.",
             "Cillian Murphy, Emily Blunt, Matt Damon, Robert Downey Jr.",
             "uYPbbksJxIg"
         ));
         movies.add(new Movie(
-            "Kalki 2898 AD", "Hindi", "Action / Sci-Fi", 181, 190, 8.1,
+            "Kalki 2898 AD", "Hindi", "Action / Sci-Fi", 181, 360, 8.1,
             "posters/kalki.jpg", "UA 13+",
             "In a post-apocalyptic world in the year 2898 AD, a modern avatar of Vishnu descends to Earth to protect the world from evil forces.",
             "Prabhas, Amitabh Bachchan, Kamal Haasan, Deepika Padukone",
             "Vv3Z6yV9R2Y"
         ));
         movies.add(new Movie(
-            "Laapataa Ladies", "Hindi", "Comedy / Drama", 122, 160, 8.4,
+            "Laapataa Ladies", "Hindi", "Comedy / Drama", 122, 280, 8.4,
             "posters/laapataa.jpg", "UA 13+",
             "Two young brides get accidentally swapped on a train journey in rural India, leading to a heartwarming voyage of self-discovery.",
             "Nitanshi Goel, Pratibha Ranta, Sparsh Shrivastava, Ravi Kishan",
             "1U_2A1fK59A"
         ));
         movies.add(new Movie(
-            "Maharaja", "Tamil", "Thriller / Crime", 150, 170, 8.5,
+            "Maharaja", "Tamil", "Thriller / Crime", 150, 320, 8.5,
             "posters/maharaja.jpg", "UA 16+",
             "A humble barber sets out on a relentless quest to retrieve his stolen 'Lakshmi', leading the police into a complex labyrinth of crime.",
             "Vijay Sethupathi, Anurag Kashyap, Mamta Mohandas, Natty",
             "Yx3b0GjKkQ0"
         ));
         movies.add(new Movie(
-            "Furiosa: A Mad Max Saga", "English", "Action / Adventure", 148, 210, 7.9,
+            "Furiosa: A Mad Max Saga", "English", "Action / Adventure", 148, 380, 7.9,
             "posters/furiosa.jpg", "A 18+",
             "As the world falls, young Furiosa is snatched from the Green Place of Many Mothers and falls into the hands of a great Biker Horde.",
             "Anya Taylor-Joy, Chris Hemsworth, Tom Burke, Alyla Browne",
