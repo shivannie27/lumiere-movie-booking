@@ -98,12 +98,22 @@
                     <h3 id="book-movie-title" style="font-size: 17px; margin-bottom: 4px; color: var(--burgundy);"></h3>
                     <p id="book-movie-show" style="color: var(--sage); font-size: 12px; margin-bottom: 14px;"></p>
                     
-                    <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 6px;">Ticket Tier</label>
-                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                        <button class="pill-btn filled" id="btn-type-regular" style="flex: 1;" onclick="UI.setTicketType(false)">Regular</button>
-                        <button class="pill-btn outline" id="btn-type-premium" style="flex: 1;" onclick="UI.setTicketType(true)">Premium</button>
+                    <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 6px;">Seating Tiers & Pricing</label>
+                    <div class="tier-info-cards">
+                        <div class="tier-info-row tier-row-vip">
+                            <span class="tier-badge-pill">👑 VIP Recliner (I–J)</span>
+                            <strong class="tier-price" id="tier-price-vip">Rs. 320</strong>
+                        </div>
+                        <div class="tier-info-row tier-row-exec">
+                            <span class="tier-badge-pill">⭐ Executive (E–H)</span>
+                            <strong class="tier-price" id="tier-price-exec">Rs. 260</strong>
+                        </div>
+                        <div class="tier-info-row tier-row-club">
+                            <span class="tier-badge-pill">🎬 Club Classic (A–D)</span>
+                            <strong class="tier-price" id="tier-price-club">Rs. 200</strong>
+                        </div>
                     </div>
-                    <small style="color: var(--sage); display: block; margin-bottom: 14px; line-height: 1.4;">Premium includes luxury leather recliner seats (+Rs. 100/seat)</small>
+                    <small style="color: var(--sage); display: block; margin-bottom: 14px; margin-top: 6px; line-height: 1.4;">Select your desired seats. Prices calculate automatically per tier.</small>
 
                     <!-- Theater Concessions F&B Section -->
                     <div class="snacks-section">
@@ -146,8 +156,13 @@
                         <div class="screen-bar">S C R E E N</div>
                     </div>
                     <div class="seat-matrix" id="seat-matrix"></div>
-                    <div class="legend">
-                        <div><span class="legend-box" style="background: var(--mint);"></span> Available</div>
+                    <div class="tier-legend">
+                        <div class="tier-legend-item"><span class="tier-chip chip-club"></span> Club (A–D)</div>
+                        <div class="tier-legend-item"><span class="tier-chip chip-exec"></span> Executive (E–H)</div>
+                        <div class="tier-legend-item"><span class="tier-chip chip-vip"></span> VIP Recliner (I–J)</div>
+                    </div>
+                    <div class="legend" style="margin-top: 10px;">
+                        <div><span class="legend-box" style="background: var(--mint); border: 1px solid #81C784;"></span> Available</div>
                         <div><span class="legend-box" style="background: var(--burgundy);"></span> Selected</div>
                         <div><span class="legend-box" style="background: var(--booked);"></span> Booked</div>
                     </div>

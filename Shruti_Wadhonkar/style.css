@@ -384,10 +384,78 @@ header {
     font-weight: 600;
 }
 
-.seat-matrix { display: flex; flex-direction: column; gap: 7px; align-items: center; }
+/* Seating Tiers Info Box (Left Panel) */
+.tier-info-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.tier-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    background: var(--cream);
+    transition: all 0.2s ease;
+}
+.tier-row-vip {
+    background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+    border-color: #D4AF37;
+    color: var(--burgundy);
+}
+.tier-row-exec {
+    background: #FFF9E6;
+    border-color: rgba(212, 175, 55, 0.6);
+    color: #8C6D1F;
+}
+.tier-row-club {
+    background: #E8F5E9;
+    border-color: rgba(129, 199, 132, 0.5);
+    color: #1B5E20;
+}
+.tier-badge-pill { font-weight: 700; font-size: 11px; }
+.tier-price { font-weight: bold; font-family: Georgia, serif; }
+
+.seat-matrix { display: flex; flex-direction: column; gap: 6px; align-items: center; width: 100%; }
+.seat-tier-divider {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0 3px;
+    position: relative;
+}
+.seat-tier-divider::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.4), transparent);
+}
+.tier-divider-tag {
+    position: relative;
+    padding: 2px 12px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.tier-divider-tag.tag-club { color: #1B5E20; border-color: #81C784; background: #E8F5E9; }
+.tier-divider-tag.tag-exec { color: #8D6E63; border-color: #D4AF37; background: #FFF8E1; }
+.tier-divider-tag.tag-vip  { color: #4A0E17; border-color: #D4AF37; background: linear-gradient(135deg, #FFF3E0, #FFE0B2); }
+
 .seat-row { display: flex; gap: 5px; align-items: center; }
 .row-label { width: 18px; font-size: 11px; color: var(--sage); text-align: center; font-weight: bold; }
 .aisle-gap { width: 16px; }
+
+/* Seat Base & Tier Variants */
 .seat-btn {
     width: 28px;
     height: 28px;
@@ -400,15 +468,63 @@ header {
     color: var(--burgundy);
     transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+.seat-btn.tier-club {
+    background: #E8F5E9;
+    border-color: rgba(129, 199, 132, 0.6);
+    color: #1B5E20;
+}
+.seat-btn.tier-exec {
+    background: #FFF9E6;
+    border-color: rgba(212, 175, 55, 0.7);
+    color: #8C6D1F;
+}
+.seat-btn.tier-vip {
+    width: 32px;
+    background: linear-gradient(135deg, #FFE8D6, #FED7B8);
+    border: 1.5px solid #D4AF37;
+    color: var(--burgundy);
+    box-shadow: 0 2px 4px rgba(212, 175, 55, 0.25);
+}
 .seat-btn:hover:not(.booked) { transform: scale(1.15); border-color: var(--burgundy); }
+.seat-btn.tier-vip:hover:not(.booked) {
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.65);
+    transform: scale(1.18);
+}
 .seat-btn.selected { 
-    background: var(--burgundy); 
-    color: var(--white); 
-    box-shadow: 0 2px 6px rgba(89, 23, 27, 0.35);
-    transform: scale(1.08);
+    background: var(--burgundy) !important; 
+    color: var(--white) !important; 
+    border-color: var(--gold) !important;
+    box-shadow: 0 2px 8px rgba(89, 23, 27, 0.45) !important;
+    transform: scale(1.12);
 }
 .seat-btn.booked { background: var(--booked); cursor: not-allowed; color: #9A8E89; opacity: 0.7; }
-.legend { display: flex; justify-content: center; gap: 18px; margin-top: 20px; font-size: 12px; color: var(--sage); }
+
+/* Tier Legend */
+.tier-legend {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 14px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.tier-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--sage);
+}
+.tier-chip {
+    width: 13px;
+    height: 13px;
+    border-radius: 4px;
+    display: inline-block;
+}
+.tier-chip.chip-club { background: #E8F5E9; border: 1px solid #81C784; }
+.tier-chip.chip-exec { background: #FFF9E6; border: 1px solid #D4AF37; }
+.tier-chip.chip-vip { background: #FFE8D6; border: 1.5px solid #D4AF37; }
+
+.legend { display: flex; justify-content: center; gap: 18px; margin-top: 8px; font-size: 12px; color: var(--sage); }
 .legend-box { width: 14px; height: 14px; border-radius: 4px; display: inline-block; vertical-align: middle; margin-right: 5px; }
 
 /* Theater Snacks & Concessions Section */

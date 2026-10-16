@@ -266,32 +266,71 @@ const UI = {
         const res = await fetch(`/api/booked-seats?movie=${encMovie}&show=${encShow}`);
         this.bookedSeats = await res.json();
 
-        this.updateTypeButtons();
         this.renderSeats();
         this.renderSnacks();
         this.updateBill();
         this.showScreen("booking");
     },
 
+    getSeatTierInfo(seatName) {
+        if (!seatName) return { id: 'club', name: 'Club Classic', surcharge: 0, badge: '🎬 Club' };
+        const row = seatName.charAt(0).toUpperCase();
+        if (row >= 'I') return { id: 'vip', name: 'VIP Recliner', surcharge: 120, badge: '👑 VIP' };
+        if (row >= 'E') return { id: 'exec', name: 'Executive', surcharge: 60, badge: '⭐ Exec' };
+        return { id: 'club', name: 'Club Classic', surcharge: 0, badge: '🎬 Club' };
+    },
+
     renderSeats() {
         const matrix = document.getElementById("seat-matrix");
         const rows = 10, cols = 12;
+        const base = this.currentMovie ? this.currentMovie.price : 200;
+
+        // Update Left Panel Tier Pricing Cards
+        const vipEl = document.getElementById("tier-price-vip");
+        const execEl = document.getElementById("tier-price-exec");
+        const clubEl = document.getElementById("tier-price-club");
+        if (vipEl) vipEl.innerText = `Rs. ${(base + 120).toFixed(2)}`;
+        if (execEl) execEl.innerText = `Rs. ${(base + 60).toFixed(2)}`;
+        if (clubEl) clubEl.innerText = `Rs. ${base.toFixed(2)}`;
+
         let html = "";
         for (let r = 0; r < rows; r++) {
             const rowLetter = String.fromCharCode(65 + r);
+            const tier = this.getSeatTierInfo(rowLetter + "1");
+
+            // Insert Section Dividers at tier boundaries
+            if (rowLetter === 'A') {
+                html += `<div class="seat-tier-divider"><span class="tier-divider-tag tag-club">🎬 Club Classic &bull; Rs. ${base.toFixed(2)}</span></div>`;
+            } else if (rowLetter === 'E') {
+                html += `<div class="seat-tier-divider"><span class="tier-divider-tag tag-exec">⭐ Executive (Dolby Atmos) &bull; Rs. ${(base + 60).toFixed(2)}</span></div>`;
+            } else if (rowLetter === 'I') {
+                html += `<div class="seat-tier-divider"><span class="tier-divider-tag tag-vip">👑 VIP Royal Recliner &bull; Rs. ${(base + 120).toFixed(2)}</span></div>`;
+            }
+
             html += `<div class="seat-row"><span class="row-label">${rowLetter}</span>`;
             for (let c = 1; c <= cols; c++) {
                 if (c === 7) html += `<div class="aisle-gap"></div>`;
                 const seatName = `${rowLetter}${c}`;
                 const isBooked = this.bookedSeats.includes(seatName);
                 const isSelected = this.selectedSeats.includes(seatName);
-                const cls = isBooked ? "seat-btn booked" : isSelected ? "seat-btn selected" : "seat-btn";
-                html += `<button class="${cls}" onclick="UI.toggleSeat('${seatName}', ${isBooked})" title="Seat ${seatName}">${seatName}</button>`;
+                const cls = `seat-btn tier-${tier.id}` + (isBooked ? " booked" : isSelected ? " selected" : "");
+                html += `<button class="${cls}" onclick="UI.toggleSeat('${seatName}', ${isBooked})" title="${seatName} - ${tier.name} (Rs. ${(base + tier.surcharge).toFixed(2)})">${seatName}</button>`;
             }
             html += `</div>`;
         }
         matrix.innerHTML = html;
-        document.getElementById("selected-seats-display").innerText = this.selectedSeats.length > 0 ? this.selectedSeats.join(", ") : "None";
+
+        const displayEl = document.getElementById("selected-seats-display");
+        if (displayEl) {
+            if (this.selectedSeats.length === 0) {
+                displayEl.innerHTML = `<span style="color: var(--sage); font-size: 14px; font-weight: normal;">None selected</span>`;
+            } else {
+                displayEl.innerHTML = this.selectedSeats.map(s => {
+                    const t = this.getSeatTierInfo(s);
+                    return `<span style="display:inline-block; margin:2px 3px; padding:2px 8px; border-radius:6px; background:var(--cream); font-size:12px; font-weight:bold; color:var(--burgundy); border:1px solid rgba(74,14,23,0.2);">${s} <small style="color:var(--sage); font-weight:normal;">(${t.badge})</small></span>`;
+                }).join("");
+            }
+        }
     },
 
     playAudioClick() {
@@ -517,25 +556,22 @@ const UI = {
     },
 
     // ---------- Price Calculations & Form Handling ----------
-    setTicketType(premium) {
-        this.isPremium = premium;
-        this.updateTypeButtons();
-        this.updateBill();
-    },
-
-    updateTypeButtons() {
-        document.getElementById("btn-type-regular").className = this.isPremium ? "pill-btn outline" : "pill-btn filled";
-        document.getElementById("btn-type-premium").className = this.isPremium ? "pill-btn filled" : "pill-btn outline";
-    },
-
     updateBill() {
-        const unit = this.currentMovie ? (this.currentMovie.price + (this.isPremium ? 100 : 0)) : 0;
+        const movieBase = this.currentMovie ? this.currentMovie.price : 200;
+        let base = 0;
+        let hasVip = false;
+        this.selectedSeats.forEach(s => {
+            const t = this.getSeatTierInfo(s);
+            base += movieBase + t.surcharge;
+            if (t.id === 'vip') hasVip = true;
+        });
+        this.isPremium = hasVip;
+
         const count = this.selectedSeats.length;
-        const base = count * unit;
         const snacks = this.getSnacksTotal();
         const fee = count * 10;
         
-        // Exact match with Ticket.breakdown(unitPrice, qty, discount, snacks):
+        // Exact match with Ticket.breakdown:
         const discountAmount = Math.min(base, this.appliedDiscount);
         const netBase = Math.max(0, base - discountAmount);
         const gst = (netBase + fee) * 0.18;
@@ -643,14 +679,16 @@ const UI = {
         const port = (this.serverInfo && this.serverInfo.port) ? this.serverInfo.port : (window.location.port || 8080);
         const ticketUrl = `http://${host}:${port}/ticket?id=${t.id}`;
         const snacksVal = t.snacks && parseFloat(t.snacks) > 0 ? `Rs. ${parseFloat(t.snacks).toFixed(2)}` : "None";
-        const seatsVal = Array.isArray(t.seats) ? t.seats.join(", ") : t.seats;
+        const seatsWithTiers = Array.isArray(t.seats) 
+            ? t.seats.map(s => `${s} (${this.getSeatTierInfo(s).name})`).join(", ") 
+            : t.seats;
 
         const msg = 
 `🎬 *LUMIÈRE CINEMAS — OFFICIAL E-PASS* 🎟️
 ━━━━━━━━━━━━━━━━━━━━
 ✨ *Movie:* ${t.movie.title} [${t.movie.certification || 'UA'}]
 🏛️ *Cinema & Screen:* ${t.showTime}
-💺 *Reserved Seats:* ${seatsVal} (${t.type} Recliner)
+💺 *Reserved Seats:* ${seatsWithTiers} [${t.type}]
 👤 *Guest Name:* ${t.customer.name}
 📱 *Phone:* ${t.customer.phone}
 🔖 *Booking Passport ID:* ${t.id}
@@ -686,13 +724,16 @@ _Please arrive 15 minutes before showtime._`;
 
     buildBoardingPassHtml(ticket) {
         const snacksVal = ticket.snacks && parseFloat(ticket.snacks) > 0 ? `Rs. ${parseFloat(ticket.snacks).toFixed(2)}` : "None";
-        const seatsVal = Array.isArray(ticket.seats) ? ticket.seats.join(", ") : ticket.seats;
+        const seatsVal = Array.isArray(ticket.seats) 
+            ? ticket.seats.map(s => `${s} [${this.getSeatTierInfo(s).name}]`).join(", ") 
+            : ticket.seats;
+        const typeLabel = ticket.type.toUpperCase().includes("RECLINER") ? ticket.type.toUpperCase() : `${ticket.type.toUpperCase()} CLASS`;
 
         return `
             <div class="ticket-boarding-pass" id="ticket-boarding-pass">
                 <div class="pass-header">
                     <div class="pass-brand">LUMIÈRE CINEMAS</div>
-                    <span class="pass-type-badge">${ticket.type} RECLINER</span>
+                    <span class="pass-type-badge">${typeLabel}</span>
                 </div>
 
                 <div class="pass-movie-title">${ticket.movie.title}</div>

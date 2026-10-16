@@ -289,7 +289,7 @@
             document.getElementById("pass-name").innerText = name;
             document.getElementById("pass-phone").innerText = phone;
             document.getElementById("pass-total").innerText = "Rs. " + parseFloat(total).toFixed(2);
-            document.getElementById("pass-tier").innerText = type.toUpperCase() + " RECLINER";
+            document.getElementById("pass-tier").innerText = type.toUpperCase().includes("RECLINER") ? type.toUpperCase() : type.toUpperCase() + " CLASS";
             document.getElementById("pass-snacks").innerText = snacks;
 
             const msg = 

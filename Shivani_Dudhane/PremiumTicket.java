@@ -4,7 +4,7 @@
 // =====================================================================
 
 public class PremiumTicket extends Ticket {
-    public static final double RECLINER_FEE = 100.0;
+    public static final double RECLINER_FEE = 120.0;
 
     public PremiumTicket(String bookingId, Movie movie, Customer customer, String showTime, String[] seats) {
         super(bookingId, movie, customer, showTime, seats);
@@ -16,17 +16,11 @@ public class PremiumTicket extends Ticket {
 
     @Override
     public String getType() {
-        return "Premium";
+        return "VIP Recliner";
     }
 
     @Override
     public double getSeatPriceWithExtras() {
         return super.getSeatPriceWithExtras() + RECLINER_FEE;
-    }
-
-    @Override
-    public double calculateBill() {
-        double reclinerTotal = getSeats().length * RECLINER_FEE;
-        return super.calculateBill() + (reclinerTotal * gstMultiplier());
     }
 }

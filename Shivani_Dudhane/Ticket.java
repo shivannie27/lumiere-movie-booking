@@ -46,7 +46,44 @@ public class Ticket {
     public double getPricePerSeat()    { return pricePerSeat; }
     public double getSnacksTotal()     { return snacksTotal; }
     public double getDiscountAmount()  { return discountAmount; }
-    public String getType()            { return "Regular"; }
+    public static String getSeatTier(String seat) {
+        if (seat == null || seat.trim().isEmpty()) return "Club";
+        char r = Character.toUpperCase(seat.trim().charAt(0));
+        if (r >= 'I') return "VIP Recliner";
+        if (r >= 'E') return "Executive";
+        return "Club";
+    }
+
+    public static double getTierSurcharge(String seat) {
+        String tier = getSeatTier(seat);
+        if ("VIP Recliner".equals(tier)) return 120.0;
+        if ("Executive".equals(tier)) return 60.0;
+        return 0.0;
+    }
+
+    public double calculateBaseSeatsTotal() {
+        double sum = 0.0;
+        for (String s : seats) {
+            sum += pricePerSeat + getTierSurcharge(s);
+        }
+        return sum;
+    }
+
+    public String getType() {
+        boolean hasVip = false;
+        boolean hasExec = false;
+        boolean hasClub = false;
+        for (String s : seats) {
+            String tier = getSeatTier(s);
+            if ("VIP Recliner".equals(tier)) hasVip = true;
+            else if ("Executive".equals(tier)) hasExec = true;
+            else hasClub = true;
+        }
+        if (hasVip && !hasExec && !hasClub) return "VIP Recliner";
+        if (hasExec && !hasVip && !hasClub) return "Executive";
+        if (hasClub && !hasVip && !hasExec) return "Club Classic";
+        return "Multi-Tier";
+    }
 
     public double getSeatPriceWithExtras() {
         return pricePerSeat;
@@ -56,9 +93,9 @@ public class Ticket {
         return 1.0 + (gstPercent / 100.0);
     }
 
-    /** Primary polymorphic bill calculation */
+    /** Primary polymorphic bill calculation with tiered seat prices */
     public double calculateBill() {
-        double base = seats.length * pricePerSeat;
+        double base = calculateBaseSeatsTotal();
         double netBase = Math.max(0.0, base - discountAmount);
         double fee = seats.length * CONVENIENCE_FEE;
         double ticketsTotal = (netBase + fee) * gstMultiplier();

@@ -375,7 +375,11 @@ public class App {
                 "</div></body></html>";
         }
 
-        String seats = String.join(", ", ticket.getSeats());
+        List<String> seatList = new ArrayList<>();
+        for (String s : ticket.getSeats()) {
+            seatList.add(s + " (" + Ticket.getSeatTier(s) + ")");
+        }
+        String seats = String.join(", ", seatList);
         String snacks = ticket.getSnacksTotal() > 0 ? String.format(java.util.Locale.US, "Rs. %.2f", ticket.getSnacksTotal()) : "None";
         String discount = ticket.getDiscountAmount() > 0 ? String.format(java.util.Locale.US, "-Rs. %.2f", ticket.getDiscountAmount()) : "Standard Rate";
 
@@ -415,7 +419,7 @@ public class App {
             "<div class='pass-card'>" +
             "<div class='pass-brand'>" +
             "<div class='brand-title'>LUMIÈRE CINEMAS</div>" +
-            "<div class='tier-tag'>" + ticket.getType() + " RECLINER</div>" +
+            "<div class='tier-tag'>" + ticket.getType() + "</div>" +
             "</div>" +
             "<div class='movie-head'>" + ticket.getMovie().getTitle() + "</div>" +
             "<div class='movie-sub'>" + ticket.getMovie().getLanguage() + " &bull; " + ticket.getMovie().getDurationText() + " &bull; " + ticket.getMovie().getCertification() + "</div>" +
