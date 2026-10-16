@@ -687,29 +687,34 @@ header {
 .stat-val { font-family: Georgia, serif; font-size: 30px; font-weight: bold; color: var(--burgundy); }
 .stat-name { font-size: 13px; color: var(--sage); margin-top: 4px; font-weight: 500; }
 
-/* Print Media Query */
+ /* Print Media Query */
 @media print {
     body * { visibility: hidden; }
-    #ticket-boarding-pass, #ticket-boarding-pass * { visibility: visible; }
+
+    #ticket-boarding-pass,
+    #ticket-boarding-pass * {
+        visibility: visible;
+    }
+
     #ticket-boarding-pass {
         position: absolute;
-        left: 0;
         top: 0;
+        left: 0;
         width: 100%;
-        margin: 0;
-        box-shadow: none;
-        background: #26070A !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
     }
+
+    header, button { display: none !important; }
 }
 
 /* Responsive adjustments */
 @media (max-width: 900px) {
     .booking-layout { grid-template-columns: 1fr; }
-    .details-box { flex-direction: column; align-items: center; text-align: center; }
+    .details-box {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
     .summary-grid { grid-template-columns: repeat(2, 1fr); }
     header { padding: 12px 16px; }
     .screen { padding: 16px; }
 }
-
